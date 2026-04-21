@@ -1,29 +1,61 @@
 """
 Prior functions module.
 """
-from __future__ import division
-from loguru import logger
+
 from textwrap import dedent
-from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp, isfinite, logical_not
+
+from loguru import logger
+from numpy import (
+    abs,
+    any,
+    arange,
+    array,
+    exp,
+    inf,
+    isfinite,
+    log,
+    logical_not,
+    nan,
+    ones,
+    pi,
+    where,
+)
 from numpy.random import uniform
 
 try:
     from kelp.jax.jax import _g_from_ag
+
     kelp_loaded = True
 except:
     kelp_loaded = False
 
+from ....posterior.exoplanet.model.convert import (
+    getaoverr,
+    getaoverr_circular,
+    getecc_plb_4_handk_fast,
+    getecc_plc_4_handk_fast,
+    gethminus,
+    gethplus,
+    getkminus,
+    getkplus,
+    getomega_plb_4_handk_fast,
+    getomega_plc_4_handk_fast,
+)
+from ....tools.function_from_text_toolbox import (
+    add_param_argument,
+    get_function_arglist,
+    init_arglist_paramnb_arguments_ldict,
+    key_param,
+    par_vec_name,
+)
+from ....tools.function_w_doc import DocFunction
 from ...core.prior.core_prior import Core_JointPrior_Function
 from ...core.prior.prior_function import BetaPrior
-from ....posterior.exoplanet.model.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
-from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr, getaoverr_circular
-from ....tools.function_w_doc import DocFunction
-from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_ldict, add_param_argument, par_vec_name, key_param, get_function_arglist
-
 
 #################
 # Marginal priors
 #################
+
 
 class BetaEccPrior(BetaPrior):
     """Beta Prior
@@ -42,31 +74,32 @@ class BetaEccPrior(BetaPrior):
     def __init__(self):
         self.a = 0.867
         self.b = 3.03
-        super(BetaEccPrior, self).__init__()
+        super().__init__()
 
 
 ##############
 # Joint priors
 ##############
 
+
 class HKPPrior(Core_JointPrior_Function):
-    """Prior defined for the h, k and P parameters of the Np parametrisation of the GravgroupsDynam model.
-    """
+    """Prior defined for the h, k and P parameters of the Np parametrisation of the GravgroupsDynam model."""
 
     __category__ = "hkP"
     __mandatory_args__ = []
     __extra_args__ = []
     __default_extra_args__ = {}
-    __hidden_param_refs__ = ['Pb', 'Pc', 'eb', 'ec', 'omegab', 'omegac']
+    __hidden_param_refs__ = ["Pb", "Pc", "eb", "ec", "omegab", "omegac"]
     __multiple_hidden_params__ = [False, False, False, False, False, False]
-    __default_hidden_priors__ = {"Pb": {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}},
-                                 "Pc": {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}},
-                                 "eb": {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
-                                 "ec": {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
-                                 "omegab": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}},
-                                 "omegac": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}}
-                                 }
-    __param_refs__ = ['hplus', 'hminus', 'kplus', 'kminus', 'Pb', 'Pc']
+    __default_hidden_priors__ = {
+        "Pb": {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.0}},
+        "Pc": {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.0}},
+        "eb": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "ec": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "omegab": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}},
+        "omegac": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}},
+    }
+    __param_refs__ = ["hplus", "hminus", "kplus", "kminus", "Pb", "Pc"]
     __multiple_params__ = [False, False, False, False, False, False]
 
     def create_logpdf(self, params):
@@ -78,11 +111,13 @@ class HKPPrior(Core_JointPrior_Function):
         :return function logpdf: log pdf the order in which the parameter should be provided is
             provided by self.param_refs
         """
-        (param_nb,
-         arg_list,
-         param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(keys="prior", key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        (param_nb, arg_list, param_vector_name, ldict) = init_arglist_paramnb_arguments_ldict(
+            keys="prior", key_param=key_param, param_vector_name=par_vec_name
+        )
+        dico_logpdf = {
+            param: priorfunc.create_logpdf()
+            for param, priorfunc in self.priorinstance_hiddenparams.items()
+        }
         ldict["dico_logpdf"] = dico_logpdf
         ldict["getecc_plb_4_handk_fast"] = getecc_plb_4_handk_fast
         ldict["getecc_plc_4_handk_fast"] = getecc_plc_4_handk_fast
@@ -91,9 +126,14 @@ class HKPPrior(Core_JointPrior_Function):
         ldict["inf"] = inf
         dico_text_params = {}
         for param_key in self.param_refs:
-            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
-                                                             param_nb=param_nb, param_vector_name=par_vec_name)["prior"]
-        function_name = "logpdf_{}".format(self.category)
+            dico_text_params[param_key] = add_param_argument(
+                param=params[param_key],
+                arg_list=arg_list,
+                key_param=key_param,
+                param_nb=param_nb,
+                param_vector_name=par_vec_name,
+            )["prior"]
+        function_name = f"logpdf_{self.category}"
         text_function = """
         def {function_name}({param_vector_name}):
             if {Pc}/{Pb} < 1:
@@ -106,16 +146,32 @@ class HKPPrior(Core_JointPrior_Function):
                     dico_logpdf["omegab"](omegab) + dico_logpdf["omegac"](omegac))
         """
         text_function = dedent(text_function)
-        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             hplus=dico_text_params["hplus"], hminus=dico_text_params["hminus"],
-                                             kplus=dico_text_params["kplus"], kminus=dico_text_params["kminus"],
-                                             Pb=dico_text_params["Pb"], Pc=dico_text_params["Pc"])
-        logger.debug("text of joint prior {category}:\n{text_func}"
-                     "".format(category=self.category, text_func=text_function))
-        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist="prior")[key_param])}))
+        text_function = text_function.format(
+            function_name=function_name,
+            param_vector_name=par_vec_name,
+            hplus=dico_text_params["hplus"],
+            hminus=dico_text_params["hminus"],
+            kplus=dico_text_params["kplus"],
+            kminus=dico_text_params["kminus"],
+            Pb=dico_text_params["Pb"],
+            Pc=dico_text_params["Pc"],
+        )
+        logger.debug(f"text of joint prior {self.category}:\n{text_function}")
+        logger.debug(
+            "Parameters for joint prior {category}:\n{dico_param}".format(
+                category=self.category,
+                dico_param={
+                    nb: param
+                    for nb, param in enumerate(
+                        get_function_arglist(arg_list, key_arglist="prior")[key_param]
+                    )
+                },
+            )
+        )
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist="prior"))
+        return DocFunction(
+            ldict[function_name], get_function_arglist(arg_list, key_arglist="prior")
+        )
 
     def logpdf(self, hplus, hminus, kplus, kminus, Pb, Pc):
         dico_logpdf = self.priorinstance_hiddenparams
@@ -124,8 +180,14 @@ class HKPPrior(Core_JointPrior_Function):
         ec = getecc_plc_4_handk_fast(hplus, hminus, kplus, kminus)
         omegab = getomega_plb_4_handk_fast(hplus, hminus, kplus, kminus)
         omegac = getomega_plc_4_handk_fast(hplus, hminus, kplus, kminus)
-        return (dico_logpdf["Pb"](Pb) + dico_logpdf["Pc"](Pc) + dico_logpdf["eb"](eb) + dico_logpdf["ec"](ec) +
-                dico_logpdf["omegab"](omegab) + dico_logpdf["omegac"](omegac))
+        return (
+            dico_logpdf["Pb"](Pb)
+            + dico_logpdf["Pc"](Pc)
+            + dico_logpdf["eb"](eb)
+            + dico_logpdf["ec"](ec)
+            + dico_logpdf["omegab"](omegab)
+            + dico_logpdf["omegac"](omegac)
+        )
 
     def ravs(self, nb_values=1):
         """Return values of the parameters drawn from the joint prior.
@@ -144,10 +206,34 @@ class HKPPrior(Core_JointPrior_Function):
                 dico_ravs[param] = ones(nb_values) * value
             if dico_ravs[param].size == 1:
                 dico_ravs[param] = dico_ravs[param][0]
-        hplus = gethplus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
-        hminus = gethminus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
-        kplus = getkplus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
-        kminus = getkminus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
+        hplus = gethplus(
+            dico_ravs["Pb"] / dico_ravs["Pc"],
+            dico_ravs["eb"],
+            dico_ravs["ec"],
+            dico_ravs["omegab"],
+            dico_ravs["omegac"],
+        )
+        hminus = gethminus(
+            dico_ravs["Pb"] / dico_ravs["Pc"],
+            dico_ravs["eb"],
+            dico_ravs["ec"],
+            dico_ravs["omegab"],
+            dico_ravs["omegac"],
+        )
+        kplus = getkplus(
+            dico_ravs["Pb"] / dico_ravs["Pc"],
+            dico_ravs["eb"],
+            dico_ravs["ec"],
+            dico_ravs["omegab"],
+            dico_ravs["omegac"],
+        )
+        kminus = getkminus(
+            dico_ravs["Pb"] / dico_ravs["Pc"],
+            dico_ravs["eb"],
+            dico_ravs["ec"],
+            dico_ravs["omegab"],
+            dico_ravs["omegac"],
+        )
         return hplus, hminus, kplus, kminus, dico_ravs["Pb"], dico_ravs["Pc"]
 
 
@@ -159,33 +245,55 @@ class HKPtPrior(Core_JointPrior_Function):
     """
 
     __category__ = "hkPt"
-    __mandatory_args__ = ['t_ref']
-    __extra_args__ = ['Phi_lims']
+    __mandatory_args__ = ["t_ref"]
+    __extra_args__ = ["Phi_lims"]
     __default_extra_args__ = {}
-    __hidden_param_refs__ = ['Pb', 'Pc', 'eb', 'ec', 'omegab', 'omegac', 'tb', 'tc', 'Phib', 'Phic']
-    __multiple_hidden_params__ = [False, False, False, False, False, False, False, False, False, False]
-    __default_hidden_priors__ = {'Pb': {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}},
-                                 'Pc': {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}},
-                                 'eb': {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
-                                 'ec': {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
-                                 'omegab': {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}},
-                                 'omegac': {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}},
-                                 'Phib': {"category": "uniform", "args": {"vmin": -0.5, "vmax": 0.5}},
-                                 'Phic': {"category": "uniform", "args": {"vmin": -0.5, "vmax": 0.5}},
-                                 }
-    __param_refs__ = ['hplus', 'hminus', 'kplus', 'kminus', 'Pb', 'Pc', 'tb', 'tc']
+    __hidden_param_refs__ = ["Pb", "Pc", "eb", "ec", "omegab", "omegac", "tb", "tc", "Phib", "Phic"]
+    __multiple_hidden_params__ = [
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+    ]
+    __default_hidden_priors__ = {
+        "Pb": {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.0}},
+        "Pc": {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.0}},
+        "eb": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "ec": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "omegab": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}},
+        "omegac": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}},
+        "Phib": {"category": "uniform", "args": {"vmin": -0.5, "vmax": 0.5}},
+        "Phic": {"category": "uniform", "args": {"vmin": -0.5, "vmax": 0.5}},
+    }
+    __param_refs__ = ["hplus", "hminus", "kplus", "kminus", "Pb", "Pc", "tb", "tc"]
     __multiple_params__ = [False, False, False, False, False, False, False, False]
 
     def __init__(self, params, *args, **kwargs):
-        super(HKPtPrior, self).__init__(params, *args, **kwargs)
+        super().__init__(params, *args, **kwargs)
         self.use_phi = {}
-        for tname, t_prior, Phiname, Phi_prior, planet_name in zip(["tb", "tc"],
-                                                                   [self.dico_args[self.hiddenparamprior_key].get("tb_prior", None), self.dico_args[self.hiddenparamprior_key].get("tc_prior", None)],
-                                                                   ["Phib", "Phib"],
-                                                                   [self.dico_args[self.hiddenparamprior_key].get("Phib_prior", None), self.dico_args[self.hiddenparamprior_key].get("Phic_prior", None)],
-                                                                   ["b", "c"]):
+        for tname, t_prior, Phiname, Phi_prior, planet_name in zip(
+            ["tb", "tc"],
+            [
+                self.dico_args[self.hiddenparamprior_key].get("tb_prior", None),
+                self.dico_args[self.hiddenparamprior_key].get("tc_prior", None),
+            ],
+            ["Phib", "Phib"],
+            [
+                self.dico_args[self.hiddenparamprior_key].get("Phib_prior", None),
+                self.dico_args[self.hiddenparamprior_key].get("Phic_prior", None),
+            ],
+            ["b", "c"],
+        ):
             if (t_prior is not None) and (Phi_prior is not None):
-                raise ValueError("t_prior and Phi_prior cannot be set at the same time. It's one or the other.")
+                raise ValueError(
+                    "t_prior and Phi_prior cannot be set at the same time. It's one or the other."
+                )
             elif (t_prior is None) and (Phi_prior is None):
                 self.use_phi[planet_name] = True
             elif t_prior is not None:
@@ -194,7 +302,7 @@ class HKPtPrior(Core_JointPrior_Function):
                 self.use_phi[planet_name] = True
             if self.use_phi[planet_name] and (self.Phi_lims is not None):
                 raise ValueError("Phi_lims should not be set when Phi_prior is provided")
-        if any([not(use_phi) for use_phi in self.use_phi.values()]):
+        if any([not (use_phi) for use_phi in self.use_phi.values()]):
             if self.Phi_lims is None:
                 self.Phi_lims = (-0.5, 0.5)
             self.Phi_min, self.Phi_max = self.Phi_lims
@@ -208,11 +316,13 @@ class HKPtPrior(Core_JointPrior_Function):
         :return function logpdf: log pdf the order in which the parameter should be provided is
             provided by self.param_refs
         """
-        (param_nb,
-         arg_list,
-         param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(keys="prior", key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        (param_nb, arg_list, param_vector_name, ldict) = init_arglist_paramnb_arguments_ldict(
+            keys="prior", key_param=key_param, param_vector_name=par_vec_name
+        )
+        dico_logpdf = {
+            param: priorfunc.create_logpdf()
+            for param, priorfunc in self.priorinstance_hiddenparams.items()
+        }
         ldict["dico_logpdf"] = dico_logpdf
         ldict["getecc_plb_4_handk_fast"] = getecc_plb_4_handk_fast
         ldict["getecc_plc_4_handk_fast"] = getecc_plc_4_handk_fast
@@ -221,22 +331,31 @@ class HKPtPrior(Core_JointPrior_Function):
         ldict["inf"] = inf
         dico_text_params = {}
         for param_key in self.param_refs:
-            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
-                                                             param_nb=param_nb, param_vector_name=par_vec_name)["prior"]
+            dico_text_params[param_key] = add_param_argument(
+                param=params[param_key],
+                arg_list=arg_list,
+                key_param=key_param,
+                param_nb=param_nb,
+                param_vector_name=par_vec_name,
+            )["prior"]
         logpdf_torPhi = {}
         check_Phi_lims = ""
-        for planet_name in ['b', 'c']:
+        for planet_name in ["b", "c"]:
             if self.use_phi[planet_name]:
-                logpdf_torPhi[planet_name] = "dico_logpdf['Phi{planet_name}'](Phi{planet_name})".format(planet_name=planet_name)
+                logpdf_torPhi[planet_name] = f"dico_logpdf['Phi{planet_name}'](Phi{planet_name})"
             else:
                 text_Phi_lims = """
                 {tab}if (Phi{planet_name} < {Phi_min}) or (Phi{planet_name} > {Phi_max}):
                 {tab}    return -inf
                 """
-                check_Phi_lims += dedent(text_Phi_lims).format(tab="    ", planet_name=planet_name, Phi_min=self.Phi_min, Phi_max=self.Phi_max)
-                logpdf_torPhi[planet_name] = "dico_logpdf['t{planet_name}']({{t_planet}})".format(planet_name=planet_name)
-                logpdf_torPhi[planet_name] = logpdf_torPhi[planet_name].format(t_planet=dico_text_params["t{}".format(planet_name)])
-        function_name = "logpdf_{}".format(self.category)
+                check_Phi_lims += dedent(text_Phi_lims).format(
+                    tab="    ", planet_name=planet_name, Phi_min=self.Phi_min, Phi_max=self.Phi_max
+                )
+                logpdf_torPhi[planet_name] = f"dico_logpdf['t{planet_name}']({{t_planet}})"
+                logpdf_torPhi[planet_name] = logpdf_torPhi[planet_name].format(
+                    t_planet=dico_text_params[f"t{planet_name}"]
+                )
+        function_name = f"logpdf_{self.category}"
         text_function = """
         def {function_name}({param_vector_name}):
             if {Pc}/{Pb} < 1:
@@ -252,20 +371,38 @@ class HKPtPrior(Core_JointPrior_Function):
                     dico_logpdf['omegab'](omegab) + dico_logpdf['omegac'](omegac) + {logpdf_torPhib} + {logpdf_torPhic})
         """
         text_function = dedent(text_function)
-        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             hplus=dico_text_params["hplus"], hminus=dico_text_params["hminus"],
-                                             kplus=dico_text_params["kplus"], kminus=dico_text_params["kminus"],
-                                             Pb=dico_text_params["Pb"], Pc=dico_text_params["Pc"],
-                                             tb=dico_text_params["tb"], tc=dico_text_params["tc"],
-                                             check_Phi_lims=check_Phi_lims, t_ref=self.t_ref,
-                                             logpdf_torPhib=logpdf_torPhi["b"], logpdf_torPhic=logpdf_torPhi["c"]
-                                             )
-        logger.debug("text of joint prior {category}:\n{text_func}"
-                     "".format(category=self.category, text_func=text_function))
-        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist="prior")[key_param])}))
+        text_function = text_function.format(
+            function_name=function_name,
+            param_vector_name=par_vec_name,
+            hplus=dico_text_params["hplus"],
+            hminus=dico_text_params["hminus"],
+            kplus=dico_text_params["kplus"],
+            kminus=dico_text_params["kminus"],
+            Pb=dico_text_params["Pb"],
+            Pc=dico_text_params["Pc"],
+            tb=dico_text_params["tb"],
+            tc=dico_text_params["tc"],
+            check_Phi_lims=check_Phi_lims,
+            t_ref=self.t_ref,
+            logpdf_torPhib=logpdf_torPhi["b"],
+            logpdf_torPhic=logpdf_torPhi["c"],
+        )
+        logger.debug(f"text of joint prior {self.category}:\n{text_function}")
+        logger.debug(
+            "Parameters for joint prior {category}:\n{dico_param}".format(
+                category=self.category,
+                dico_param={
+                    nb: param
+                    for nb, param in enumerate(
+                        get_function_arglist(arg_list, key_arglist="prior")[key_param]
+                    )
+                },
+            )
+        )
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist="prior"))
+        return DocFunction(
+            ldict[function_name], get_function_arglist(arg_list, key_arglist="prior")
+        )
 
     def logpdf(self, hplus, hminus, kplus, kminus, Pb, Pc, tb, tc):
         if Pc / Pb < 1:
@@ -276,17 +413,25 @@ class HKPtPrior(Core_JointPrior_Function):
         res_Phiort = {}
         for Phi, tt, planet_name in zip([Phib, Phic], [tb, tc], ["b", "c"]):
             if self.use_phi[planet_name]:
-                res_Phiort[planet_name] = dico_logpdf["Phi{}".format(planet_name)](Phi)
+                res_Phiort[planet_name] = dico_logpdf[f"Phi{planet_name}"](Phi)
             else:
                 if (Phi < self.Phi_min) or (Phi > self.Phi_max):
                     return -inf
-                res_Phiort[planet_name] = dico_logpdf["t{}".format(planet_name)](tt)
+                res_Phiort[planet_name] = dico_logpdf[f"t{planet_name}"](tt)
         eb = getecc_plb_4_handk_fast(hplus, hminus, kplus, kminus, Pc / Pb)
         ec = getecc_plc_4_handk_fast(hplus, hminus, kplus, kminus)
         omegab = getomega_plb_4_handk_fast(hplus, hminus, kplus, kminus)
         omegac = getomega_plc_4_handk_fast(hplus, hminus, kplus, kminus)
-        return (dico_logpdf["Pb"](Pb) + dico_logpdf["Pc"](Pc) + dico_logpdf["eb"](eb) + dico_logpdf["ec"](ec) +
-                dico_logpdf["omegab"](omegab) + dico_logpdf["omegac"](omegac) + res_Phiort["b"] + res_Phiort["c"])
+        return (
+            dico_logpdf["Pb"](Pb)
+            + dico_logpdf["Pc"](Pc)
+            + dico_logpdf["eb"](eb)
+            + dico_logpdf["ec"](ec)
+            + dico_logpdf["omegab"](omegab)
+            + dico_logpdf["omegac"](omegac)
+            + res_Phiort["b"]
+            + res_Phiort["c"]
+        )
 
     def ravs(self, nb_values=1):
         """Return values of the parameters drawn from the joint prior.
@@ -305,20 +450,48 @@ class HKPtPrior(Core_JointPrior_Function):
                 dico_ravs[param] = ones(nb_values) * value
             if dico_ravs[param].size == 1:
                 dico_ravs[param] = dico_ravs[param][0]
-        hplus = gethplus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
-        hminus = gethminus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
-        kplus = getkplus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
-        kminus = getkminus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
+        hplus = gethplus(
+            dico_ravs["Pb"] / dico_ravs["Pc"],
+            dico_ravs["eb"],
+            dico_ravs["ec"],
+            dico_ravs["omegab"],
+            dico_ravs["omegac"],
+        )
+        hminus = gethminus(
+            dico_ravs["Pb"] / dico_ravs["Pc"],
+            dico_ravs["eb"],
+            dico_ravs["ec"],
+            dico_ravs["omegab"],
+            dico_ravs["omegac"],
+        )
+        kplus = getkplus(
+            dico_ravs["Pb"] / dico_ravs["Pc"],
+            dico_ravs["eb"],
+            dico_ravs["ec"],
+            dico_ravs["omegab"],
+            dico_ravs["omegac"],
+        )
+        kminus = getkminus(
+            dico_ravs["Pb"] / dico_ravs["Pc"],
+            dico_ravs["eb"],
+            dico_ravs["ec"],
+            dico_ravs["omegab"],
+            dico_ravs["omegac"],
+        )
         tt = {}
         for planet_name in ["b", "c"]:
             if self.use_phi[planet_name]:
-                tt[planet_name] = dico_ravs["Phi{}".format(planet_name)] * dico_ravs["P{}".format(planet_name)] + self.t_ref
+                tt[planet_name] = (
+                    dico_ravs[f"Phi{planet_name}"] * dico_ravs[f"P{planet_name}"] + self.t_ref
+                )
             else:
-                tt[planet_name] = dico_ravs["t{}".format(planet_name)]
-                Phi = (tt[planet_name] - self.t_ref) / dico_ravs["P{}".format(planet_name)]
+                tt[planet_name] = dico_ravs[f"t{planet_name}"]
+                Phi = (tt[planet_name] - self.t_ref) / dico_ravs[f"P{planet_name}"]
                 indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
                 while len(indexes) > 0:
-                    tt[planet_name][indexes] = self.hiddenparam_defs["t{}".format(planet_name)]["priorfunc_instance"].ravs(nb_values=len(indexes))
+                    tt[planet_name][indexes] = self.hiddenparam_defs[f"t{planet_name}"][
+                        "priorfunc_instance"
+                    ].ravs(nb_values=len(indexes))
                     indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
         return hplus, hminus, kplus, kminus, dico_ravs["Pb"], dico_ravs["Pc"], tt["b"], tt["c"]
 
@@ -336,23 +509,26 @@ class Ptphiprior(Core_JointPrior_Function):
     """
 
     __category__ = "Ptphi"
-    __mandatory_args__ = ['t_ref']
-    __extra_args__ = ['Phi_lims']
+    __mandatory_args__ = ["t_ref"]
+    __extra_args__ = ["Phi_lims"]
     __default_extra_args__ = {}
-    __hidden_param_refs__ = ['P', 't', 'Phi']
-    __default_hidden_priors__ = {'P': {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}},
-                                 'Phi': {"category": "uniform", "args": {"vmin": -0.5, "vmax": 0.5}}
-                                 }
+    __hidden_param_refs__ = ["P", "t", "Phi"]
+    __default_hidden_priors__ = {
+        "P": {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.0}},
+        "Phi": {"category": "uniform", "args": {"vmin": -0.5, "vmax": 0.5}},
+    }
     __multiple_hidden_params__ = [False, False, False]
-    __param_refs__ = ['P', 't']
+    __param_refs__ = ["P", "t"]
     __multiple_params__ = [False, False]
 
     def __init__(self, params, *args, **kwargs):
-        super(Ptphiprior, self).__init__(params, *args, **kwargs)
+        super().__init__(params, *args, **kwargs)
         t_prior = self.dico_args[self.hiddenparamprior_key].get("t_prior", None)
         Phi_prior = self.dico_args[self.hiddenparamprior_key].get("Phi_prior", None)
         if (t_prior is not None) and (Phi_prior is not None):
-            raise ValueError("t_prior and Phi_prior cannot be set at the same time. It's one or the other.")
+            raise ValueError(
+                "t_prior and Phi_prior cannot be set at the same time. It's one or the other."
+            )
         elif (t_prior is None) and (Phi_prior is None):
             self.use_phi = True
         elif t_prior is not None:
@@ -361,7 +537,7 @@ class Ptphiprior(Core_JointPrior_Function):
             self.use_phi = True
         if self.use_phi and (self.Phi_lims is not None):
             raise ValueError("Phi_lims should not be set when Phi_prior is provided")
-        if not(self.use_phi):
+        if not (self.use_phi):
             if self.Phi_lims is None:
                 self.Phi_lims = (-0.5, 0.5)
             self.Phi_min, self.Phi_max = self.Phi_lims
@@ -375,17 +551,25 @@ class Ptphiprior(Core_JointPrior_Function):
         :return function logpdf: log pdf the order in which the parameter should be provided is
             provided by self.param_refs
         """
-        (param_nb,
-         arg_list,
-         param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(keys="prior", key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items() if priorfunc is not None}
+        (param_nb, arg_list, param_vector_name, ldict) = init_arglist_paramnb_arguments_ldict(
+            keys="prior", key_param=key_param, param_vector_name=par_vec_name
+        )
+        dico_logpdf = {
+            param: priorfunc.create_logpdf()
+            for param, priorfunc in self.priorinstance_hiddenparams.items()
+            if priorfunc is not None
+        }
         ldict["dico_logpdf"] = dico_logpdf
         dico_text_params = {}
         for param_key in self.param_refs:
-            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
-                                                             param_nb=param_nb, param_vector_name=par_vec_name)["prior"]
-        function_name = "logpdf_{}".format(self.category)
+            dico_text_params[param_key] = add_param_argument(
+                param=params[param_key],
+                arg_list=arg_list,
+                key_param=key_param,
+                param_nb=param_nb,
+                param_vector_name=par_vec_name,
+            )["prior"]
+        function_name = f"logpdf_{self.category}"
         if self.use_phi:
             text_function = """
             def {function_name}({param_vector_name}):
@@ -393,8 +577,13 @@ class Ptphiprior(Core_JointPrior_Function):
                 return dico_logpdf["P"]({P}) + dico_logpdf["Phi"](Phi)
             """
             text_function = dedent(text_function)
-            text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                                 t=dico_text_params["t"], t_ref=self.t_ref, P=dico_text_params["P"])
+            text_function = text_function.format(
+                function_name=function_name,
+                param_vector_name=par_vec_name,
+                t=dico_text_params["t"],
+                t_ref=self.t_ref,
+                P=dico_text_params["P"],
+            )
         else:
             ldict["inf"] = inf
             text_function = """
@@ -406,15 +595,31 @@ class Ptphiprior(Core_JointPrior_Function):
                     return dico_logpdf["P"]({P}) + dico_logpdf["t"]({t})
             """
             text_function = dedent(text_function)
-            text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                                 t=dico_text_params["t"], t_ref=self.t_ref, P=dico_text_params["P"],
-                                                 Phi_min=self.Phi_min, Phi_max=self.Phi_max)
-        logger.debug("text of joint prior {category}:\n{text_func}"
-                     "".format(category=self.category, text_func=text_function))
-        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist="prior")[key_param])}))
+            text_function = text_function.format(
+                function_name=function_name,
+                param_vector_name=par_vec_name,
+                t=dico_text_params["t"],
+                t_ref=self.t_ref,
+                P=dico_text_params["P"],
+                Phi_min=self.Phi_min,
+                Phi_max=self.Phi_max,
+            )
+        logger.debug(f"text of joint prior {self.category}:\n{text_function}")
+        logger.debug(
+            "Parameters for joint prior {category}:\n{dico_param}".format(
+                category=self.category,
+                dico_param={
+                    nb: param
+                    for nb, param in enumerate(
+                        get_function_arglist(arg_list, key_arglist="prior")[key_param]
+                    )
+                },
+            )
+        )
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist="prior"))
+        return DocFunction(
+            ldict[function_name], get_function_arglist(arg_list, key_arglist="prior")
+        )
 
     def logpdf(self, P, t):
         dico_logpdf = self.priorinstance_hiddenparams
@@ -441,7 +646,9 @@ class Ptphiprior(Core_JointPrior_Function):
             if dico is not None:
                 value = dico.get("value", None)
                 if value is None:
-                    dico_ravs[param] = self.priorinstance_hiddenparams[param].ravs(nb_values=nb_values)
+                    dico_ravs[param] = self.priorinstance_hiddenparams[param].ravs(
+                        nb_values=nb_values
+                    )
                 else:
                     dico_ravs[param] = ones(nb_values) * value
                 if dico_ravs[param].size == 1:
@@ -453,7 +660,9 @@ class Ptphiprior(Core_JointPrior_Function):
             Phi = (dico_ravs["t"] - self.t_ref) / dico_ravs["P"]
             indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
             while len(indexes) > 0:
-                dico_ravs["t"][indexes] = self.priorinstance_hiddenparams["t"].ravs(nb_values=len(indexes))
+                dico_ravs["t"][indexes] = self.priorinstance_hiddenparams["t"].ravs(
+                    nb_values=len(indexes)
+                )
                 indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
             return dico_ravs["P"], dico_ravs["t"]
 
@@ -473,24 +682,25 @@ class Transitingprior(Core_JointPrior_Function):
     """
 
     __category__ = "transiting"
-    __mandatory_args__ = ['transiting', 'allow_grazing']
+    __mandatory_args__ = ["transiting", "allow_grazing"]
     __extra_args__ = []
     __default_extra_args__ = {}
-    __param_refs__ = ['aR', 'cosinc', 'Rrat']
+    __param_refs__ = ["aR", "cosinc", "Rrat"]
     __multiple_params__ = [False, False, False]
-    __hidden_param_refs__ = ['Rrat', 'b', 'aR']
+    __hidden_param_refs__ = ["Rrat", "b", "aR"]
     __multiple_hidden_params__ = [False, False, False]
-    __default_hidden_priors__ = {'Rrat': {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
-                                 'b': {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
-                                 'aR': {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
-                                 }
+    __default_hidden_priors__ = {
+        "Rrat": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "b": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "aR": {"category": "jeffreys", "args": {"vmin": 1.0, "vmax": 1e3}},
+    }
 
     def _get_hidden_param_default_dict(self, dico_default_values=None):
         """Update Core_JointPrior_Function._get_hidden_param_default_dict
 
         Adapt the default prior for b to the value of transiting and allow_grazing
         """
-        dico = super(Transitingprior, self)._get_hidden_param_default_dict(dico_default_values=dico_default_values)
+        dico = super()._get_hidden_param_default_dict(dico_default_values=dico_default_values)
         # if self.multiple_hidden_params[1]:  # 1 is for b
         #     nb_b = self.infer_hiddenparams_nb(hidden_param_ref="b")
         #     for ii, transiting_ii, allow_grazing_ii in zip(range(nb_b), self.transiting, self.allow_grazing):
@@ -505,12 +715,12 @@ class Transitingprior(Core_JointPrior_Function):
         # else:
         if self.transiting:
             if self.allow_grazing:
-                dico["b"] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
+                dico["b"] = {"category": "uniform", "args": {"vmin": 0.0, "vmax": 2.0}}
         else:
             if self.allow_grazing:
-                dico["b"] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+                dico["b"] = {"category": "jeffreys", "args": {"vmin": 1.0, "vmax": 1e3}}
             else:
-                dico["b"] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+                dico["b"] = {"category": "jeffreys", "args": {"vmin": 0.0, "vmax": 1e3}}
         return dico
 
     def create_logpdf(self, params):
@@ -522,12 +732,14 @@ class Transitingprior(Core_JointPrior_Function):
         :return function logpdf: log pdf the order in which the parameter should be provided is
             provided by self.param_refs
         """
-        (param_nb,
-         arg_list,
-         param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(keys="prior", key_param=key_param, param_vector_name=par_vec_name)
+        (param_nb, arg_list, param_vector_name, ldict) = init_arglist_paramnb_arguments_ldict(
+            keys="prior", key_param=key_param, param_vector_name=par_vec_name
+        )
         # Create the logpdf function for each hidden parameter
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        dico_logpdf = {
+            param: priorfunc.create_logpdf()
+            for param, priorfunc in self.priorinstance_hiddenparams.items()
+        }
         # Put variables that you want to have available when you execute the text of the joint
         # logpdf function in ldict
         ldict["dico_logpdf"] = dico_logpdf
@@ -535,10 +747,15 @@ class Transitingprior(Core_JointPrior_Function):
         # Associate each parameter with value: a number of it's is fixed or a p[i] if it's free.
         dico_text_params = {}
         for param_key in self.param_refs:
-            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
-                                                             param_nb=param_nb, param_vector_name=par_vec_name)["prior"]
+            dico_text_params[param_key] = add_param_argument(
+                param=params[param_key],
+                arg_list=arg_list,
+                key_param=key_param,
+                param_nb=param_nb,
+                param_vector_name=par_vec_name,
+            )["prior"]
         # Define the joint logpdf function name
-        function_name = "logpdf_{}".format(self.category)
+        function_name = f"logpdf_{self.category}"
         # For the prior you will need to compare the value of b with the condition for transiting and
         # grazind. Make the text that performs this comparison
         if self.transiting:
@@ -564,17 +781,32 @@ class Transitingprior(Core_JointPrior_Function):
         """
         text_function = dedent(text_function)
         # Fill the template of the logpdf function
-        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             aR=dico_text_params["aR"], cosinc=dico_text_params["cosinc"],
-                                             Rrat=dico_text_params["Rrat"], text_comp=text_comp)
+        text_function = text_function.format(
+            function_name=function_name,
+            param_vector_name=par_vec_name,
+            aR=dico_text_params["aR"],
+            cosinc=dico_text_params["cosinc"],
+            Rrat=dico_text_params["Rrat"],
+            text_comp=text_comp,
+        )
 
-        logger.debug("text of joint prior {category}:\n{text_func}"
-                     "".format(category=self.category, text_func=text_function))
-        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist="prior")[key_param])}))
+        logger.debug(f"text of joint prior {self.category}:\n{text_function}")
+        logger.debug(
+            "Parameters for joint prior {category}:\n{dico_param}".format(
+                category=self.category,
+                dico_param={
+                    nb: param
+                    for nb, param in enumerate(
+                        get_function_arglist(arg_list, key_arglist="prior")[key_param]
+                    )
+                },
+            )
+        )
 
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist="prior"))
+        return DocFunction(
+            ldict[function_name], get_function_arglist(arg_list, key_arglist="prior")
+        )
 
     def logpdf(self, aR, cosinc, Rrat):
         dico_logpdf = self.priorinstance_hiddenparams
@@ -582,14 +814,14 @@ class Transitingprior(Core_JointPrior_Function):
         b = aR * cosinc
         if self.transiting:
             if self.allow_grazing:
-                comp = (b > (1 + Rrat))
+                comp = b > (1 + Rrat)
             else:
-                comp = (b > (1 - Rrat))
+                comp = b > (1 - Rrat)
         else:
             if self.allow_grazing:
-                comp = (b < (1 - Rrat))
+                comp = b < (1 - Rrat)
             else:
-                comp = (b < (1 + Rrat))
+                comp = b < (1 + Rrat)
         if comp:
             return -inf
         else:
@@ -622,11 +854,15 @@ class Transitingprior(Core_JointPrior_Function):
         # Indexes is the list of indexes in the arrays for which the random pick should be redrawn
         # (it doesn't satisfy the condition)
         indexes = arange(nb_values)  # We initialise indexes with the list of all element in array
-        while len(indexes) > 0:  # While there is at least one drawn that doesn't satisfy the condition, do a new draw.
+        while (
+            len(indexes) > 0
+        ):  # While there is at least one drawn that doesn't satisfy the condition, do a new draw.
             # For all hidden parameter redo the drawn for indexes where the condition is not satisfied.
             for hiddenparam_ref in self.hidden_param_refs:
                 if dico_pick[hiddenparam_ref]:
-                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
+                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[
+                        hiddenparam_ref
+                    ].ravs(nb_values=len(indexes))
             # Check if cosinc is below 1
             indexes_cosinc = where(dico_ravs["b"] / dico_ravs["Rrat"] > 1)[0]
             # Check if and where the condition is not satisfy.
@@ -646,7 +882,7 @@ class Transitingprior(Core_JointPrior_Function):
             for param, dico in self.hiddenparam_defs.items():
                 dico_ravs[param] = dico_ravs[param][0]
 
-        return dico_ravs['aR'], dico_ravs["b"] / dico_ravs["aR"], dico_ravs["Rrat"]
+        return dico_ravs["aR"], dico_ravs["b"] / dico_ravs["aR"], dico_ravs["Rrat"]
 
 
 class TransitingRhoprior(Transitingprior):
@@ -673,34 +909,42 @@ class TransitingRhoprior(Transitingprior):
     """
 
     __category__ = "transiting_rho"
-    __mandatory_args__ = ['transiting', 'allow_grazing', 't_ref']
+    __mandatory_args__ = ["transiting", "allow_grazing", "t_ref"]
     __extra_args__ = []
     __default_extra_args__ = []
-    __param_refs__ = ['rhostar', 'P', 'tic', 'cosinc', 'Rrat']
+    __param_refs__ = ["rhostar", "P", "tic", "cosinc", "Rrat"]
     __multiple_params__ = [False, True, True, True, True]
-    __hidden_param_refs__ = ['rhostar', 'P', 'Phi', 'Rrat', 'b']
+    __hidden_param_refs__ = ["rhostar", "P", "Phi", "Rrat", "b"]
     __multiple_hidden_params__ = [False, True, True, True, True]
-    __default_hidden_priors__ = {'rhostar': {'category': 'normal', 'args': {'mu': 1, 'sigma': 0.1, 'lims': [0., None]}},
-                                 'P': {'category': 'jeffreys', 'args': {'vmin': 0.1, 'vmax': 1e4}},
-                                 'Phi': {'category': 'uniform', 'args': {'vmin': 0, 'vmax': 1}},
-                                 'Rrat': {'category': 'uniform', 'args': {'vmin': 0., 'vmax': 1.}},
-                                 'b': {'category': 'uniform', 'args': {'vmin': 0., 'vmax': 1.}}
-                                 }
+    __default_hidden_priors__ = {
+        "rhostar": {"category": "normal", "args": {"mu": 1, "sigma": 0.1, "lims": [0.0, None]}},
+        "P": {"category": "jeffreys", "args": {"vmin": 0.1, "vmax": 1e4}},
+        "Phi": {"category": "uniform", "args": {"vmin": 0, "vmax": 1}},
+        "Rrat": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "b": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+    }
 
     def __init__(self, params, *args, **kwargs):
         super(Transitingprior, self).__init__(params, *args, **kwargs)
         # Check that P, cosinc and Rrat have the same number of parameters.
-        if not(self.get_params_nb(param_ref="P") == self.get_params_nb(param_ref="tic") == self.get_params_nb(param_ref="cosinc") == self.get_params_nb(param_ref="Rrat")):
-            raise ValueError("You should have the same number of P, cosinc and Rrat parameters. One of each per planet !")
+        if not (
+            self.get_params_nb(param_ref="P")
+            == self.get_params_nb(param_ref="tic")
+            == self.get_params_nb(param_ref="cosinc")
+            == self.get_params_nb(param_ref="Rrat")
+        ):
+            raise ValueError(
+                "You should have the same number of P, cosinc and Rrat parameters. One of each per planet !"
+            )
         self.nb_planet = self.get_params_nb(param_ref="P")
         # transiting and allow_grazing are also multiples so check the transiting and allow_grazing have
         # the good dimensions. The user can provide only one value and in this case it's assumed that it applies
         # to all planets.
         err_msg = "transiting, allow_grazing and t_ref should be list with the same length as params['P'], one per planet."
         for arg in [self.transiting, self.allow_grazing, self.t_ref]:
-            if not(isinstance(arg, list)):
+            if not (isinstance(arg, list)):
                 raise ValueError(err_msg)
-            elif (len(arg) != self.nb_planet):
+            elif len(arg) != self.nb_planet:
                 raise ValueError(err_msg)
 
     def _get_hidden_param_default_dict(self, dico_default_values=None):
@@ -708,17 +952,21 @@ class TransitingRhoprior(Transitingprior):
 
         Adapt the default prior for b to the value of transiting and allow_grazing
         """
-        dico = super(Transitingprior, self)._get_hidden_param_default_dict(dico_default_values=dico_default_values)
+        dico = super(Transitingprior, self)._get_hidden_param_default_dict(
+            dico_default_values=dico_default_values
+        )
         nb_b = self.infer_hiddenparams_nb(hidden_param_ref="b")
-        for ii, transiting_ii, allow_grazing_ii in zip(range(nb_b), self.transiting, self.allow_grazing):
+        for ii, transiting_ii, allow_grazing_ii in zip(
+            range(nb_b), self.transiting, self.allow_grazing
+        ):
             if transiting_ii:
                 if allow_grazing_ii:
-                    dico["b"][ii] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
+                    dico["b"][ii] = {"category": "uniform", "args": {"vmin": 0.0, "vmax": 2.0}}
             else:
                 if allow_grazing_ii:
-                    dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+                    dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 1.0, "vmax": 1e3}}
                 else:
-                    dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+                    dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 0.0, "vmax": 1e3}}
         return dico
 
     def create_logpdf(self, params):
@@ -730,17 +978,21 @@ class TransitingRhoprior(Transitingprior):
         :return function logpdf: log pdf the order in which the parameter should be provided is
             provided by self.param_refs
         """
-        (param_nb,
-         arg_list,
-         param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(keys="prior", key_param=key_param, param_vector_name=par_vec_name)
+        (param_nb, arg_list, param_vector_name, ldict) = init_arglist_paramnb_arguments_ldict(
+            keys="prior", key_param=key_param, param_vector_name=par_vec_name
+        )
         # Create the logpdf function for each hidden parameter
         dico_logpdf = {}
         for hidden_param_ref, multiple in zip(self.hidden_param_refs, self.multiple_hidden_params):
             if multiple:
-                dico_logpdf[hidden_param_ref] = [priorfunc.create_logpdf() for priorfunc in self.priorinstance_hiddenparams[hidden_param_ref]]
+                dico_logpdf[hidden_param_ref] = [
+                    priorfunc.create_logpdf()
+                    for priorfunc in self.priorinstance_hiddenparams[hidden_param_ref]
+                ]
             else:
-                dico_logpdf[hidden_param_ref] = self.priorinstance_hiddenparams[hidden_param_ref].create_logpdf()
+                dico_logpdf[hidden_param_ref] = self.priorinstance_hiddenparams[
+                    hidden_param_ref
+                ].create_logpdf()
         # Put variables that you want to have available when you execute the text of the joint
         # logpdf function in ldict
         ldict["dico_logpdf"] = dico_logpdf
@@ -753,32 +1005,48 @@ class TransitingRhoprior(Transitingprior):
         dico_text_params = {}
         for param_ref, multiple in zip(self.param_refs, self.multiple_params):
             if multiple:
-                dico_text_params[param_ref] = [add_param_argument(param=param_ref_ii, arg_list=arg_list, key_param=key_param,
-                                                                  param_nb=param_nb, param_vector_name=par_vec_name)["prior"]
-                                               for param_ref_ii in params[param_ref]]
+                dico_text_params[param_ref] = [
+                    add_param_argument(
+                        param=param_ref_ii,
+                        arg_list=arg_list,
+                        key_param=key_param,
+                        param_nb=param_nb,
+                        param_vector_name=par_vec_name,
+                    )["prior"]
+                    for param_ref_ii in params[param_ref]
+                ]
             else:
-                dico_text_params[param_ref] = add_param_argument(param=params[param_ref], arg_list=arg_list, key_param=key_param,
-                                                                 param_nb=param_nb, param_vector_name=par_vec_name)["prior"]
+                dico_text_params[param_ref] = add_param_argument(
+                    param=params[param_ref],
+                    arg_list=arg_list,
+                    key_param=key_param,
+                    param_nb=param_nb,
+                    param_vector_name=par_vec_name,
+                )["prior"]
         # Define the joint logpdf function name
-        function_name = "logpdf_{}".format(self.category)
+        function_name = f"logpdf_{self.category}"
         # For each planet, you will need to compare the value of b with the condition for transiting and
         # grazind. Make list of texts that performs this comparison (one element of the list per planet)
         list_comp = "["
         for idx_planet in range(self.get_params_nb("P")):
             if self.transiting[idx_planet]:
                 if self.allow_grazing[idx_planet]:
-                    list_comp += "b[{idx_planet}] > (1 + {Rrat})".format(idx_planet=idx_planet,
-                                                                         Rrat=dico_text_params["Rrat"][idx_planet])
+                    list_comp += "b[{idx_planet}] > (1 + {Rrat})".format(
+                        idx_planet=idx_planet, Rrat=dico_text_params["Rrat"][idx_planet]
+                    )
                 else:
-                    list_comp += "b[{idx_planet}] > (1 - {Rrat})".format(idx_planet=idx_planet,
-                                                                         Rrat=dico_text_params["Rrat"][idx_planet])
+                    list_comp += "b[{idx_planet}] > (1 - {Rrat})".format(
+                        idx_planet=idx_planet, Rrat=dico_text_params["Rrat"][idx_planet]
+                    )
             else:
                 if self.allow_grazing:
-                    list_comp += "b[{idx_planet}] < (1 - {Rrat})".format(idx_planet=idx_planet,
-                                                                         Rrat=dico_text_params["Rrat"][idx_planet])
+                    list_comp += "b[{idx_planet}] < (1 - {Rrat})".format(
+                        idx_planet=idx_planet, Rrat=dico_text_params["Rrat"][idx_planet]
+                    )
                 else:
-                    list_comp += "b[{idx_planet}] < (1 + {Rrat})".format(idx_planet=idx_planet,
-                                                                         Rrat=dico_text_params["Rrat"][idx_planet])
+                    list_comp += "b[{idx_planet}] < (1 + {Rrat})".format(
+                        idx_planet=idx_planet, Rrat=dico_text_params["Rrat"][idx_planet]
+                    )
             list_comp += ", "
         list_comp += "]"
         # Define the full template for the logpdf function text
@@ -803,46 +1071,65 @@ class TransitingRhoprior(Transitingprior):
         """
         text_function = dedent(text_function)
         # Fill the template of the logpdf function
-        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             P=", ".join(dico_text_params["P"]), cosinc=", ".join(dico_text_params["cosinc"]),
-                                             Rrat=", ".join(dico_text_params["Rrat"]), rhostar=dico_text_params["rhostar"],
-                                             tic=", ".join(dico_text_params["tic"]), t_ref=", ".join([str(t_ref_ii) for t_ref_ii in self.t_ref]),
-                                             list_comp=list_comp)
+        text_function = text_function.format(
+            function_name=function_name,
+            param_vector_name=par_vec_name,
+            P=", ".join(dico_text_params["P"]),
+            cosinc=", ".join(dico_text_params["cosinc"]),
+            Rrat=", ".join(dico_text_params["Rrat"]),
+            rhostar=dico_text_params["rhostar"],
+            tic=", ".join(dico_text_params["tic"]),
+            t_ref=", ".join([str(t_ref_ii) for t_ref_ii in self.t_ref]),
+            list_comp=list_comp,
+        )
 
-        logger.debug("text of joint prior {category}:\n{text_func}"
-                     "".format(category=self.category, text_func=text_function))
-        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist="prior")[key_param])}))
+        logger.debug(f"text of joint prior {self.category}:\n{text_function}")
+        logger.debug(
+            "Parameters for joint prior {category}:\n{dico_param}".format(
+                category=self.category,
+                dico_param={
+                    nb: param
+                    for nb, param in enumerate(
+                        get_function_arglist(arg_list, key_arglist="prior")[key_param]
+                    )
+                },
+            )
+        )
 
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist="prior"))
+        return DocFunction(
+            ldict[function_name], get_function_arglist(arg_list, key_arglist="prior")
+        )
 
     def logpdf(self, rhostar, P, tic, cosinc, Rrat):
-        """ NOT WORKING because need to take into account the multiple parameter (multiple planetss)
-        """
+        """NOT WORKING because need to take into account the multiple parameter (multiple planetss)"""
         raise NotImplementedError
         dico_logpdf = self.priorinstance_hiddenparams
-        aR = getaoverr(P, rhostar, 0, 90.)  # WARNING: Quick fix - ecc and omega are not included in the prior
+        aR = getaoverr(
+            P, rhostar, 0, 90.0
+        )  # WARNING: Quick fix - ecc and omega are not included in the prior
         b = aR * cosinc
         Phi = (tic - self.t_ref) / P
         if self.transiting:
             if self.allow_grazing:
-                comp = (b > (1 + Rrat))
+                comp = b > (1 + Rrat)
             else:
-                comp = (b > (1 - Rrat))
+                comp = b > (1 - Rrat)
         else:
             if self.allow_grazing:
-                comp = (b < (1 - Rrat))
+                comp = b < (1 - Rrat)
             else:
-                comp = (b < (1 + Rrat))
+                comp = b < (1 + Rrat)
         if comp:
             return -inf
         else:
-            return (dico_logpdf['rhostar'](rhostar) + sum([dico_logpdf['b'][ii](b[ii]) for ii in range(self.nb_planet)]) +
-                    sum([dico_logpdf['Rrat'][ii](Rrat[ii]) for ii in range(self.nb_planet)]) +
-                    sum([dico_logpdf['P'][ii](P[ii]) for ii in range(self.nb_planet)]) +
-                    sum([dico_logpdf['Phi'][ii](Phi[ii]) for ii in range(self.nb_planet)])
-                    )
+            return (
+                dico_logpdf["rhostar"](rhostar)
+                + sum([dico_logpdf["b"][ii](b[ii]) for ii in range(self.nb_planet)])
+                + sum([dico_logpdf["Rrat"][ii](Rrat[ii]) for ii in range(self.nb_planet)])
+                + sum([dico_logpdf["P"][ii](P[ii]) for ii in range(self.nb_planet)])
+                + sum([dico_logpdf["Phi"][ii](Phi[ii]) for ii in range(self.nb_planet)])
+            )
 
     def ravs(self, nb_values=1):
         """Return values of the parameters drawn from the joint prior.
@@ -853,7 +1140,7 @@ class TransitingRhoprior(Transitingprior):
             The order of the parameters in the tuple is provided by self.param_refs.
         """
         dico_ravs = {}  # dict containing the randomly drawn values for each hidden parameter
-        dico_pick = {}   # dict indicating if you should pick random values (True) or if the value is
+        dico_pick = {}  # dict indicating if you should pick random values (True) or if the value is
         # fixed (False) for each hidden parameter
 
         # Initialise the dictionary and the arrays which will contain the randomly drawn values. The array
@@ -883,16 +1170,26 @@ class TransitingRhoprior(Transitingprior):
         # Indexes is the list of indexes in the arrays for which the random pick should be redrawn
         # (it doesn't satisfy the condition)
         indexes = arange(nb_values)  # We initialise indexes with the list of all element in array
-        while len(indexes) > 0:   # While there is at least one drawn that doesn't satisfy the condition, do a new draw.
+        while (
+            len(indexes) > 0
+        ):  # While there is at least one drawn that doesn't satisfy the condition, do a new draw.
             # For all hidden parameter redo the drawn for indexes where the condition is not satisfied.
-            for hiddenparam_ref, multiple in zip(self.hiddenparam_defs, self.multiple_hidden_params):
+            for hiddenparam_ref, multiple in zip(
+                self.hiddenparam_defs, self.multiple_hidden_params
+            ):
                 if multiple:
                     for ii in range(self.nb_planet):
                         if dico_pick[hiddenparam_ref][ii]:
-                            dico_ravs[hiddenparam_ref][ii][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref][ii].ravs(nb_values=len(indexes))
+                            dico_ravs[hiddenparam_ref][ii][indexes] = (
+                                self.priorinstance_hiddenparams[hiddenparam_ref][ii].ravs(
+                                    nb_values=len(indexes)
+                                )
+                            )
                 else:
                     if dico_pick[hiddenparam_ref]:
-                        dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
+                        dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[
+                            hiddenparam_ref
+                        ].ravs(nb_values=len(indexes))
 
             # Check if and where the condition is not satisfy.
             # The conditions can be statisfied for one planet and not another, so we need a list of indexes.
@@ -921,7 +1218,9 @@ class TransitingRhoprior(Transitingprior):
 
         # If you just ask one value, return just one value per parameter instead of an array with only one element.
         if nb_values == 1:
-            for hiddenparam_ref, multiple in zip(self.hiddenparam_defs, self.multiple_hidden_params):
+            for hiddenparam_ref, multiple in zip(
+                self.hiddenparam_defs, self.multiple_hidden_params
+            ):
                 if multiple:
                     for ii in range(self.nb_planet):
                         dico_ravs[hiddenparam_ref][ii] = dico_ravs[hiddenparam_ref][ii][0]
@@ -930,7 +1229,9 @@ class TransitingRhoprior(Transitingprior):
         # Compute the cosinc values from the b, P and rhostar values
         dico_ravs["cosinc"] = []
         for ii in range(self.nb_planet):
-            dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr_circular(dico_ravs["P"][ii], dico_ravs["rhostar"]))
+            dico_ravs["cosinc"].append(
+                dico_ravs["b"][ii] / getaoverr_circular(dico_ravs["P"][ii], dico_ravs["rhostar"])
+            )
         # Compute the tic values from the P and Phi values
         dico_ravs["tic"] = []
         for ii in range(self.nb_planet):
@@ -956,16 +1257,17 @@ class SupInfLogPtauprior(Core_JointPrior_Function):
     __mandatory_args__ = []
     __extra_args__ = ["k"]
     __default_extra_args__ = {"k": 1}
-    __hidden_param_refs__ = ['logP', 'tau']
+    __hidden_param_refs__ = ["logP", "tau"]
     __multiple_hidden_params__ = [False, False]
-    __default_hidden_priors__ = {"logP": {"category": "uniform", "args": {"vmin": log(1.0), "vmax": log(1e3)}},
-                                 "tau": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}}
-                                 }
-    __param_refs__ = ['logP', 'tau']
+    __default_hidden_priors__ = {
+        "logP": {"category": "uniform", "args": {"vmin": log(1.0), "vmax": log(1e3)}},
+        "tau": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+    }
+    __param_refs__ = ["logP", "tau"]
     __multiple_params__ = [False, False]
 
     def __init__(self, params, *args, **kwargs):
-        super(SupInfLogPtauprior, self).__init__(params, *args, **kwargs)
+        super().__init__(params, *args, **kwargs)
         # Check that P, cosinc and Rrat have the same number of parameters.
         if self.k <= 0:
             raise ValueError("k should be strictly positive")
@@ -979,19 +1281,26 @@ class SupInfLogPtauprior(Core_JointPrior_Function):
         :return function logpdf: log pdf the order in which the parameter should be provided is
             provided by self.param_refs
         """
-        (param_nb,
-         arg_list,
-         param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(keys="prior", key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        (param_nb, arg_list, param_vector_name, ldict) = init_arglist_paramnb_arguments_ldict(
+            keys="prior", key_param=key_param, param_vector_name=par_vec_name
+        )
+        dico_logpdf = {
+            param: priorfunc.create_logpdf()
+            for param, priorfunc in self.priorinstance_hiddenparams.items()
+        }
         ldict["dico_logpdf"] = dico_logpdf
         ldict["infnt"] = inf
         ldict["exp"] = exp
         dico_text_params = {}
         for param_key in self.param_refs:
-            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
-                                                             param_nb=param_nb, param_vector_name=par_vec_name)["prior"]
-        function_name = "logpdf_{}".format(self.category)
+            dico_text_params[param_key] = add_param_argument(
+                param=params[param_key],
+                arg_list=arg_list,
+                key_param=key_param,
+                param_nb=param_nb,
+                param_vector_name=par_vec_name,
+            )["prior"]
+        function_name = f"logpdf_{self.category}"
         text_function = """
         def {function_name}({param_vector_name}):
             if {tau} / exp({logP}) >= {k}:
@@ -1000,21 +1309,36 @@ class SupInfLogPtauprior(Core_JointPrior_Function):
                 return - infnt
         """
         text_function = dedent(text_function)
-        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             logP=dico_text_params["logP"], tau=dico_text_params["tau"], k=self.k)
-        logger.debug("text of joint prior {category}:\n{text_func}"
-                     "".format(category=self.category, text_func=text_function))
-        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist="prior")[key_param])}))
+        text_function = text_function.format(
+            function_name=function_name,
+            param_vector_name=par_vec_name,
+            logP=dico_text_params["logP"],
+            tau=dico_text_params["tau"],
+            k=self.k,
+        )
+        logger.debug(f"text of joint prior {self.category}:\n{text_function}")
+        logger.debug(
+            "Parameters for joint prior {category}:\n{dico_param}".format(
+                category=self.category,
+                dico_param={
+                    nb: param
+                    for nb, param in enumerate(
+                        get_function_arglist(arg_list, key_arglist="prior")[key_param]
+                    )
+                },
+            )
+        )
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist="prior"))
+        return DocFunction(
+            ldict[function_name], get_function_arglist(arg_list, key_arglist="prior")
+        )
 
     def logpdf(self, logP, tau):
         dico_logpdf = self.priorinstance_hiddenparams
         if tau / exp(logP) >= self.k:
             return dico_logpdf["logP"](logP) + dico_logpdf["tau"](tau) - 2
         else:
-            return - inf
+            return -inf
 
     def ravs(self, nb_values=1):
         """Return values of the parameters drawn from the joint prior.
@@ -1035,7 +1359,9 @@ class SupInfLogPtauprior(Core_JointPrior_Function):
         while len(indexes) > 0:
             for hiddenparam_ref, dico in self.hiddenparam_defs.items():
                 if dico.get("value", None) is None:
-                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
+                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[
+                        hiddenparam_ref
+                    ].ravs(nb_values=len(indexes))
             indexes = where(dico_ravs["tau"] / exp(dico_ravs["logP"]) < self.k)[0]
         return dico_ravs["logP"], dico_ravs["tau"]
 
@@ -1045,7 +1371,7 @@ class KelpInhomegeousReflectionprior(Core_JointPrior_Function):
     It also allow to set the prior on omega_1 the single scaterring albedo of the bright region
     instead of omega_prime.
 
-    This also allow to avoid that the computation of the reflected light phase curve from 
+    This also allow to avoid that the computation of the reflected light phase curve from
     kelp.jax.reflected_phase_curve_inhomogeneous returns nan and the source of that is often
     that kelp.jax.jax._g_from_ag returns nan.
 
@@ -1057,19 +1383,20 @@ class KelpInhomegeousReflectionprior(Core_JointPrior_Function):
     __mandatory_args__ = []
     __extra_args__ = []
     __default_extra_args__ = {}
-    __hidden_param_refs__ = ['omega_0', 'omega_1', 'x1', 'x2', 'g']
+    __hidden_param_refs__ = ["omega_0", "omega_1", "x1", "x2", "g"]
     __multiple_hidden_params__ = [False, False, False, False, False]
-    __default_hidden_priors__ = {"g": {"category": "uniform", "args": {"vmin": -1, "vmax": 1.}},
-                                 "omega_0": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}},
-                                 "omega_1": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}},
-                                 'x1': {"category": "uniform", "args": {"vmin": -pi/2, "vmax": pi/2}},
-                                 'x2': {"category": "uniform", "args": {"vmin": -pi/2, "vmax": pi/2}},
-                                 }
-    __param_refs__ = ['omega_0', 'omega_prime', 'x1', 'x2', 'A_g']
+    __default_hidden_priors__ = {
+        "g": {"category": "uniform", "args": {"vmin": -1, "vmax": 1.0}},
+        "omega_0": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "omega_1": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "x1": {"category": "uniform", "args": {"vmin": -pi / 2, "vmax": pi / 2}},
+        "x2": {"category": "uniform", "args": {"vmin": -pi / 2, "vmax": pi / 2}},
+    }
+    __param_refs__ = ["omega_0", "omega_prime", "x1", "x2", "A_g"]
     __multiple_params__ = [False, False, False, False, False]
 
     def __init__(self, *args, **kwargs):
-        super(KelpInhomegeousReflectionprior, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.
@@ -1080,19 +1407,26 @@ class KelpInhomegeousReflectionprior(Core_JointPrior_Function):
         :return function logpdf: log pdf the order in which the parameter should be provided is
             provided by self.param_refs
         """
-        (param_nb,
-         arg_list,
-         param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(keys='prior', key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        (param_nb, arg_list, param_vector_name, ldict) = init_arglist_paramnb_arguments_ldict(
+            keys="prior", key_param=key_param, param_vector_name=par_vec_name
+        )
+        dico_logpdf = {
+            param: priorfunc.create_logpdf()
+            for param, priorfunc in self.priorinstance_hiddenparams.items()
+        }
         ldict["dico_logpdf"] = dico_logpdf
         ldict["inf"] = inf
         ldict["isfinite"] = isfinite
         ldict["_g_from_ag"] = _g_from_ag
         dico_text_params = {}
         for param_key in self.param_refs:
-            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
-                                                             param_nb=param_nb, param_vector_name=par_vec_name)['prior']
+            dico_text_params[param_key] = add_param_argument(
+                param=params[param_key],
+                arg_list=arg_list,
+                key_param=key_param,
+                param_nb=param_nb,
+                param_vector_name=par_vec_name,
+            )["prior"]
         function_name = "logpdf_{}".format(self.category.replace("-", ""))
         text_function = """
         def {function_name}({param_vector_name}):
@@ -1105,25 +1439,47 @@ class KelpInhomegeousReflectionprior(Core_JointPrior_Function):
             return dico_logpdf["omega_0"]({omega_0}) + dico_logpdf["omega_1"](omega_1) + dico_logpdf["x1"]({x1}) + dico_logpdf["x2"]({x2}) + dico_logpdf["g"](g)
         """
         text_function = dedent(text_function)
-        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             omega_0=dico_text_params["omega_0"], omega_prime=dico_text_params["omega_prime"],
-                                             x1=dico_text_params["x1"], x2=dico_text_params["x2"], A_g=dico_text_params["A_g"])
-        logger.debug("text of joint prior {category}:\n{text_func}"
-                     "".format(category=self.category, text_func=text_function))
-        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist='prior')[key_param])}))
+        text_function = text_function.format(
+            function_name=function_name,
+            param_vector_name=par_vec_name,
+            omega_0=dico_text_params["omega_0"],
+            omega_prime=dico_text_params["omega_prime"],
+            x1=dico_text_params["x1"],
+            x2=dico_text_params["x2"],
+            A_g=dico_text_params["A_g"],
+        )
+        logger.debug(f"text of joint prior {self.category}:\n{text_function}")
+        logger.debug(
+            "Parameters for joint prior {category}:\n{dico_param}".format(
+                category=self.category,
+                dico_param={
+                    nb: param
+                    for nb, param in enumerate(
+                        get_function_arglist(arg_list, key_arglist="prior")[key_param]
+                    )
+                },
+            )
+        )
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist='prior'))
+        return DocFunction(
+            ldict[function_name], get_function_arglist(arg_list, key_arglist="prior")
+        )
 
     def logpdf(self, omega_0, omega_prime, x1, x2, A_g):
         dico_logpdf = self.priorinstance_hiddenparams
-        if (x1 >= x2) or (omega_prime < 0.):
+        if (x1 >= x2) or (omega_prime < 0.0):
             return -inf
         g = _g_from_ag(A_g=A_g, omega_0=omega_0, omega_prime=omega_prime, x1=x1, x2=x2)
         if not isfinite(g):
             return -inf
         omega_1 = omega_0 + omega_prime
-        return dico_logpdf["omega_0"](omega_0) + dico_logpdf["omega_1"](omega_1) + dico_logpdf["x1"](x1) + dico_logpdf["x2"](x2) + dico_logpdf["g"](g)
+        return (
+            dico_logpdf["omega_0"](omega_0)
+            + dico_logpdf["omega_1"](omega_1)
+            + dico_logpdf["x1"](x1)
+            + dico_logpdf["x2"](x2)
+            + dico_logpdf["g"](g)
+        )
 
     def ravs(self, nb_values=1):
         """Return values of the parameters drawn from the joint prior.
@@ -1145,9 +1501,17 @@ class KelpInhomegeousReflectionprior(Core_JointPrior_Function):
         while len(indexes) > 0:
             for hiddenparam_ref, dico in self.hiddenparam_defs.items():
                 if dico.get("value", None) is None:
-                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
+                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[
+                        hiddenparam_ref
+                    ].ravs(nb_values=len(indexes))
             omega_prime = dico_ravs["omega_1"] - dico_ravs["omega_0"]
             A_g[indexes] = uniform(0, 1, size=len(indexes))
-            g = _g_from_ag(A_g=A_g, omega_0=dico_ravs["omega_0"], omega_prime=omega_prime, x1=dico_ravs["x1"], x2=dico_ravs["x2"])
+            g = _g_from_ag(
+                A_g=A_g,
+                omega_0=dico_ravs["omega_0"],
+                omega_prime=omega_prime,
+                x1=dico_ravs["x1"],
+                x2=dico_ravs["x2"],
+            )
             indexes = where(logical_not(isfinite(g)))[0]
         return dico_ravs["omega_0"], omega_prime, dico_ravs["x1"], dico_ravs["x2"], A_g
