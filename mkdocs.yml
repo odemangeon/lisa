@@ -9,14 +9,28 @@ theme:
     - navigation.sections
     - navigation.indexes
     - content.code.copy
+    - navigation.expand
 
 nav:
   - Home: index.md
   - Installation: installation.md
   - Quick Start: quickstart.md
   - User Guide:
-      - Priors: user-guide/priors.md
+      - Configuration file:
+          - Overview: user-guide/configfile_overview.md
+          - Instruments and datasets: user-guide/inst_dst.md
+          - Decorrelation: user-guide/decorr.md
+          - Noise Models: user-guide/noise_models.md
+          - Light curve models: user-guide/lc_models.md
+          - Radial Velocity models: user-guide/rv_models.md
+          - Priors: user-guide/priors.md
+      - Models, Likelihoods, Priors and Posteriors: user-guide/lisa_functions.md
+      - Inference:
+          - Emcee: user-guide/emcee.md
+          - Dynesty: user-guide/dynesty.md
+      - Plotting: user-guide/plotting.md
   - Examples:
+      - Overview: examples/overview.md
       - WASP-151: examples/wasp-151.md
 
 markdown_extensions:

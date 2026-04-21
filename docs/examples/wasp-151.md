@@ -9,10 +9,8 @@ radial velocity and photometric time-series data.
 examples/WASP-151/
   README.md
   config_file.py
-  script_mcmcexploration.py
-  script_chainanalysis.py
-  script_mcmcexploration_fuprun.py
-  script_chainanalysis_fuprun.py
+  script_EmceeExploration.py
+  chain_analysis_Emcee.ipynb
   data/
 ```
 
@@ -32,33 +30,13 @@ ipython
 From IPython:
 
 ```python
-%run script_mcmcexploration.py
+%run script_EmceeExploration.py
 ```
 
-When the exploration is complete, run:
+When the exploration is complete, run the jupyter notebook `chain_analysis_Emcee.ipynb`
 
-```python
-%run script_chainanalysis.py
-```
+## Description
 
-## Before Adapting the Example
+Describe the example, the dataset and the model setup.
+Provide overview of the expected results and some plots.
 
-Read through:
-
-- `config_file.py`
-- `script_mcmcexploration.py`
-- `script_chainanalysis.py`
-
-These files define the datasets, model setup, exploration settings, and analysis
-steps. For a new target, copy the scripts into a separate working directory and
-adapt the configuration and input data files.
-
-## Follow-up Run
-
-The files with the `_fuprun` suffix are intended for a follow-up run using the
-same example structure:
-
-```python
-%run script_mcmcexploration_fuprun.py
-%run script_chainanalysis_fuprun.py
-```

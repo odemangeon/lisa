@@ -17,8 +17,7 @@ starting points for new analyses.
 
 These pages are an initial documentation scaffold. The next useful additions are:
 
-- more worked examples from `examples/K2-19/` and `examples/helios/`;
-- a user guide for configuration files, datasets, priors, and plotting;
+- more worked examples `example/cheops/` `examples/K2-19/` and `examples/helios/` ;
 - an API reference generated from the Python package.
 
 ## Repository Layout

@@ -67,3 +67,8 @@ mkdocs serve
 ```
 
 MkDocs will print a local URL, usually `http://127.0.0.1:8000/`.
+
+If the port 8000 is already used, use another one with
+```bash
+mkdocs serve -a 127.0.0.1:8001
+```

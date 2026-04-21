@@ -1,0 +1,1 @@
+Add a table to summarize the examples and what they includes: emcee/dynesty/lmfit, LC/RV, Transit/Occultation/PC, GP, RV activity indicator, Decorrelation models/likelihood, Instruments
