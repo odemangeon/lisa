@@ -19,6 +19,7 @@ nav:
       - Configuration file:
           - Overview: user-guide/configfile_overview.md
           - Instruments and datasets: user-guide/inst_dst.md
+          - Orbital models: user-guide/orbital_models.md
           - Decorrelation: user-guide/decorr.md
           - Noise Models: user-guide/noise_models.md
           - Light curve models: user-guide/lc_models.md

@@ -4,7 +4,7 @@
 
 To analyse a new dataset using `lisa` and `emcee`.
 
-1. Make sure that `lisa` is installed and that the `lisa` anaconda environment is activated (see [Installation](installation.md));
+1. Make sure that `lisa` is installed and that the `lisa` anaconda environment is activated (see [Installation](../installation.md));
 2. Copy the `script_EmceeExploration.py` from the `script_and_functions` directory of the `lisa` repository into a working directory;
 3. In this directory, open an 'IPython' session and run it: `%run script_EmceeExploration.py`;
 4. It will walk you through the creation of the configuration file and start the Emcee exploration;
@@ -19,3 +19,5 @@ To analyse a new dataset using `lisa` and `emcee`.
 The 'script_EmceeExploration.py' create a 'lisa' model for the data and start a fit using the `emcee` package.
 
 ## Quick description of chain_analysis_Emcee.ipynb
+
+TBD

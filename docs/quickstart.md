@@ -22,8 +22,8 @@ and *Voilà*!
 
 ## Fitting data using lisa
 
-Creating models, likelihoods, priors and posteriors is nice, but it's not a finality. What everybody ultimately wants is to use interpret, infer, fit data. For that you need a ['fitting algorithm'](user-guide/inference_overview.md).
+Creating models, likelihoods, priors and posteriors is nice, but it's not a finality. What everybody ultimately wants is to use interpret, infer, fit data. For that you need a 'fitting algorithm'.
 `lisa` can be used in conjunction with any 'fitting algorithm' that use posteriors, likelihood, priors or forward model functions.
-If you are already very familiar with such a fitting algorithm you only need to know [how to access the function that lisa generate and how to use them](user-guide/lisa_functions.md)). You can also find navigated to the description of one way to use lisa with [emcee](user-guide/emcee.md) and [dynesty](user-guide/dynesty.md).
+If you are already very familiar with such a fitting algorithm you only need to know [how to access the function that lisa generate and how to use them](user-guide/lisa_functions.md). You can also navigate to the description of one way to use lisa with [emcee](user-guide/emcee.md) and [dynesty](user-guide/dynesty.md).
 
-Otherwise, the fastest way to learn the workflow is to run one of the examples included in the repository. Go the [overview of the examples available](user-guide/examples_overview.md) and select the example that matches the type of data you want to analyse and the type of inference that you want to make.
+Otherwise, the fastest way to learn the workflow is to run one of the examples included in the repository. Go the [overview of the examples available](examples/overview.md) and select the example that matches the type of data you want to analyse and the type of inference that you want to make.
