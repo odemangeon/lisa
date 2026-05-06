@@ -1,49 +1,65 @@
 #!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 emcee tools module.
 
 The objective of this module is to provide a toolbox for the exploitation and visualisation of emcee
 results.
 """
-from loguru import logger
-from matplotlib.pyplot import subplots, figure, Subplot, Axes  # , figure, plot, show
-import numpy as np
-from numpy import linspace, median, where, array, argmax, ones, nan, sqrt, argsort  # , unravel_index
-from numpy import nanpercentile, newaxis, concatenate, std, atleast_1d
-from numbers import Number
-from collections.abc import Iterable
-from statsmodels.stats.weightstats import DescrStatsW
-from copy import copy
-from uncertainties import ufloat
+
 import re
+
+# from copy import deepcopy
+from collections import OrderedDict  # defaultdict
+from collections.abc import Iterable
+from copy import copy
+from os import getcwd, makedirs
+from os.path import isfile, join
 
 # from sys import stdout
 import matplotlib.gridspec as gridspec
-from matplotlib.gridspec import GridSpec
-from matplotlib.ticker import AutoMinorLocator
-# from copy import deepcopy
-from collections import OrderedDict  # defaultdict
-from tqdm import tqdm
-from PyAstronomy.pyasl import foldAt
-from dill import dump, load
-from os import makedirs, getcwd
-from os.path import isfile, join
-from pandas import read_table, DataFrame
+import numpy as np
 from corner import corner as corner_dfm
+from dill import dump, load
 from emcee import EnsembleSampler
+from loguru import logger
+from matplotlib.gridspec import GridSpec
+from matplotlib.pyplot import Subplot, figure, subplots  # , figure, plot, show
+from matplotlib.ticker import AutoMinorLocator
+from numpy import (  # , unravel_index
+    argmax,
+    argsort,
+    array,
+    atleast_1d,
+    concatenate,
+    linspace,
+    median,
+    nan,
+    nanpercentile,
+    newaxis,
+    ones,
+    sqrt,
+    std,
+    where,
+)
+from pandas import DataFrame, read_table
+from PyAstronomy.pyasl import foldAt
 
 # import pprint
-
 # from ..tools.miscellaneous import interpret_data_filename
 # from ..tools.stats.loc_scale_estimator import mad
 from scipy.stats import median_abs_deviation as mad
-from ..tools.tqdm_logger import TqdmToLogger
-# from ..tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
-from ..tools.human_machine_interface.QCM import QCM_utilisateur
+from statsmodels.stats.weightstats import DescrStatsW
+from tqdm import tqdm
+from uncertainties import ufloat
+
+from ..explore_analyze.plot import hist_lnprob
+
 # from ..posterior.core.dataset_and_instrument.dataset import Core_Dataset
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ..explore_analyze.plot import hist_lnprob
+
+# from ..tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
+from ..tools.human_machine_interface.QCM import QCM_utilisateur
+from ..tools.tqdm_logger import TqdmToLogger
 
 # from scipy.stats import mode
 
@@ -65,7 +81,10 @@ def get_init_distrib_from_fitvalues(fitted_values):
     """
     init_distrib = {}
     for param, row in fitted_values.iterrows():
-        init_distrib[param] = {"mu": row["value"], "sigma": np.mean([abs(row["sigma+"]), abs(row["sigma-"])])}
+        init_distrib[param] = {
+            "mu": row["value"],
+            "sigma": np.mean([abs(row["sigma+"]), abs(row["sigma-"])]),
+        }
     return init_distrib
 
 
@@ -87,14 +106,20 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
         l_param_name_in_distrib = []
     l_param_name_notin_distrib = list(set(l_param_name) - set(l_param_name_in_distrib))
     if len(l_param_name_notin_distrib) > 0:
-        p0_notin_distrib = post_instance.model.get_initial_values(list_paramnames=l_param_name_notin_distrib, nb_values=nwalker)
+        p0_notin_distrib = post_instance.model.get_initial_values(
+            list_paramnames=l_param_name_notin_distrib, nb_values=nwalker
+        )
     else:
         p0_notin_distrib = []
     p0_in_distrib = []
     for param_name in l_param_name_in_distrib:
-        p0_in_distrib.append(np.random.normal(loc=init_distrib[param_name]["mu"],
-                                              scale=init_distrib[param_name]["sigma"],
-                                              size=nwalker))
+        p0_in_distrib.append(
+            np.random.normal(
+                loc=init_distrib[param_name]["mu"],
+                scale=init_distrib[param_name]["sigma"],
+                size=nwalker,
+            )
+        )
     p0 = []
     for param_name in l_param_name:
         if param_name in l_param_name_in_distrib:
@@ -104,9 +129,18 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
     return np.asarray(p0).transpose()
 
 
-def explore_v0(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
-               filename_acceptfrac="acceptfrac.dat", dat_folder=None, overwrite=None, l_param_name=None,
-               logger=None):
+def explore_v0(
+    sampler,
+    p0,
+    nsteps,
+    save_to_file=False,
+    filename_chain="chain.dat",
+    filename_acceptfrac="acceptfrac.dat",
+    dat_folder=None,
+    overwrite=None,
+    l_param_name=None,
+    logger=None,
+):
     """Perform an emcee exploration.
 
     :param emcee.EnsembleSampler sampler: EnsembleSampler instance
@@ -126,17 +160,26 @@ def explore_v0(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.da
             if isfile(filename):
                 if overwrite is None:
                     l_reponses_possibles = ["y", "n"]
-                    question = "File {} already exists. Do you want to continue and overwrite it ? {}\n".format(filename, l_reponses_possibles)
+                    question = f"File {filename} already exists. Do you want to continue and overwrite it ? {l_reponses_possibles}\n"
                     rep = QCM_utilisateur(question, l_reponses_possibles)
-                    overwrite = (rep == "y")
+                    overwrite = rep == "y"
             else:
                 overwrite = True
             if overwrite:
                 if cat == "chain":
                     with open(filename, "w") as f:
-                        f.write("i_walker\t{:s}\n".format("\t".join(l_param_name + ["lnposterior", ])))
+                        f.write(
+                            "i_walker\t{:s}\n".format(
+                                "\t".join(
+                                    l_param_name
+                                    + [
+                                        "lnposterior",
+                                    ]
+                                )
+                            )
+                        )
             else:
-                raise ValueError("{} correspond to an existing file.".format(filename))
+                raise ValueError(f"{filename} correspond to an existing file.")
     if logger is None:
         tqdm_out = None
     else:
@@ -149,11 +192,15 @@ def explore_v0(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.da
             if save_to_file:
                 with open(file_chain, "a") as f:
                     for k in range(position.shape[0]):
-                        f.write("{:4d} {:s} {:>16.14g}\n".format(k, " ".join(["{:>16.14g}".format(xx) for xx in position[k]]), lnprob[k]))
+                        f.write(
+                            "{:4d} {:s} {:>16.14g}\n".format(
+                                k, " ".join([f"{xx:>16.14g}" for xx in position[k]]), lnprob[k]
+                            )
+                        )
                 acceptance_fraction = sampler.acceptance_fraction
                 with open(file_acceptfrac, "w") as f:
                     for k, acceptfrac in enumerate(acceptance_fraction):
-                        f.write("{:4d} {:>15f}\n".format(k, acceptfrac))
+                        f.write(f"{k:4d} {acceptfrac:>15f}\n")
             pbar.update(i - previous_i)
             previous_i = i
         return result
@@ -161,9 +208,16 @@ def explore_v0(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.da
 
 default_blobs_dtype = [("log_likelihood", float), ("log_prior", float)]
 
-def explore(sampler:EnsembleSampler, initial_state, nsteps:int, 
-            check_convergence_every:None|int=None, ntau:None|float=None, tol:None|float=None, 
-            sample_kwargs:None|dict=None):
+
+def explore(
+    sampler: EnsembleSampler,
+    initial_state,
+    nsteps: int,
+    check_convergence_every: None | int = None,
+    ntau: None | float = None,
+    tol: None | float = None,
+    sample_kwargs: None | dict = None,
+):
     """Perform an emcee exploration.
 
     :param emcee.EnsembleSampler sampler: EnsembleSampler instance
@@ -191,8 +245,16 @@ def explore(sampler:EnsembleSampler, initial_state, nsteps:int,
         if sample_kwargs is None:
             sample_kwargs = {}
 
+        progress_kwargs = {"dynamic_cols": True}
+
         # Now we'll sample for up to max_n steps
-        for state in sampler.sample(initial_state, iterations=nsteps, progress=True, **sample_kwargs):
+        for state in sampler.sample(
+            initial_state,
+            iterations=nsteps,
+            progress=True,
+            progress_kwargs=progress_kwargs,
+            **sample_kwargs,
+        ):
             # Only check convergence every 100 steps
             if sampler.iteration % check_convergence_every:
                 continue
@@ -211,7 +273,12 @@ def explore(sampler:EnsembleSampler, initial_state, nsteps:int,
                 break
             old_tau = tau
     else:
-        state = sampler.run_mcmc(initial_state=initial_state, nsteps=nsteps, progress=True)
+        state = sampler.run_mcmc(
+            initial_state=initial_state,
+            nsteps=nsteps,
+            progress=True,
+            progress_kwargs=progress_kwargs,
+        )
     return state
 
 
@@ -230,17 +297,22 @@ def read_chaindatfile(chaindatfile, walker_col="i_walker", lnpost_col="lnposteri
     :return list_of_str l_param: Array containing the lnposterior values formatted as the EnsembleSampler
         object
     """
-    df = read_table(chaindatfile, sep="\s+", header=0)
+    df = read_table(chaindatfile, sep=r"\s+", header=0)
 
     nb_walker = df[walker_col].max() - df[walker_col].min() + 1
     df["iteration"] = np.array(df.index) // nb_walker
-    df.set_index([walker_col, 'iteration'], inplace=True)
+    df.set_index([walker_col, "iteration"], inplace=True)
     l_param = list(df.columns)
     l_param.remove(lnpost_col)
-    return (concatenate([df.loc[walker, :][df.columns[:-1]].values[newaxis, ...] for walker in range(nb_walker)]),
-            concatenate([df.loc[walker, :][lnpost_col].values[newaxis, ...] for walker in range(nb_walker)]),
-            l_param
-            )
+    return (
+        concatenate(
+            [df.loc[walker, :][df.columns[:-1]].values[newaxis, ...] for walker in range(nb_walker)]
+        ),
+        concatenate(
+            [df.loc[walker, :][lnpost_col].values[newaxis, ...] for walker in range(nb_walker)]
+        ),
+        l_param,
+    )
 
 
 def read_acceptfracdatfile(acceptfracdatfile, walker_col="i_walker", lnpost_col="lnposterior"):
@@ -252,13 +324,22 @@ def read_acceptfracdatfile(acceptfracdatfile, walker_col="i_walker", lnpost_col=
     :param str acceptfracdatfile: Path to .dat file
     :return array acceptance_fraction: Array containing the acceptance fraction for each walker.
     """
-    df = read_table(acceptfracdatfile, sep="\s+", header=0)
+    df = read_table(acceptfracdatfile, sep=r"\s+", header=0)
 
     return df[df.columns[-1]].values
 
 
-def plot_chains(chains, lnprobability=None, l_param_name=None, l_walker=None, l_burnin=None,
-                suppress_burnin=False, thin=1, l_param_2_plot=None, kwargs_subplots=None):
+def plot_chains(
+    chains,
+    lnprobability=None,
+    l_param_name=None,
+    l_walker=None,
+    l_burnin=None,
+    suppress_burnin=False,
+    thin=1,
+    l_param_2_plot=None,
+    kwargs_subplots=None,
+):
     """
     Arguments
     ---------
@@ -309,9 +390,13 @@ def plot_chains(chains, lnprobability=None, l_param_name=None, l_walker=None, l_
                 figsize[key] = kwargs_subplots.pop(key)
         kwargs_subplots_final.update(kwargs_subplots)
 
-    fig, ax = subplots(nrows=nrows, sharex=True, squeeze=True,
-                       figsize=(figsize["plot_width"], nrows * figsize["plot_height"]),
-                       **kwargs_subplots_final)
+    fig, ax = subplots(
+        nrows=nrows,
+        sharex=True,
+        squeeze=True,
+        figsize=(figsize["plot_width"], nrows * figsize["plot_height"]),
+        **kwargs_subplots_final,
+    )
     l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=nwalker)
     l_param_name = __get_default_l_param_name(l_param_name=l_param_name, ndim=ndim)
     l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=nwalker)
@@ -334,14 +419,25 @@ def plot_chains(chains, lnprobability=None, l_param_name=None, l_walker=None, l_
                     ax[0].set_yscale("log")
                     ax[0].set_title("lnprobability")
                 else:
-                    line = ax[0].plot(x_plot[::thin], np.sign(lnprobability[walker, ::thin]) * np.log10(abs(lnprobability[walker, ::thin])), alpha=0.5)
+                    line = ax[0].plot(
+                        x_plot[::thin],
+                        np.sign(lnprobability[walker, ::thin])
+                        * np.log10(abs(lnprobability[walker, ::thin])),
+                        alpha=0.5,
+                    )
                     lnprob_min, lnprob_max = (min_log10, max_log10)
                     ax[0].set_title("log10(lnprobability)")
             else:
                 line = ax[0].plot(x_plot[::thin], lnprobability[walker, ::thin], alpha=0.5)
                 ax[0].set_title("lnprobability")
-            ax[0].vlines(burnin, lnprob_min, lnprob_max, color=line[0].get_color(), linestyles="dashed",
-                         alpha=0.5)
+            ax[0].vlines(
+                burnin,
+                lnprob_min,
+                lnprob_max,
+                color=line[0].get_color(),
+                linestyles="dashed",
+                alpha=0.5,
+            )
         start_idx_params = 1
     else:
         start_idx_params = 0
@@ -352,21 +448,41 @@ def plot_chains(chains, lnprobability=None, l_param_name=None, l_walker=None, l_
         vmax = chains[l_walker, ::thin, l_idx_param_2_plot[idx_ax]].max()
         for walker, burnin in zip(l_walker, l_burnin):
             if suppress_burnin:
-                line = ax[idx_ax + start_idx_params].plot(x_plot[burnin::thin], chains[walker, burnin::thin, l_idx_param_2_plot[idx_ax]], alpha=0.5)
+                line = ax[idx_ax + start_idx_params].plot(
+                    x_plot[burnin::thin],
+                    chains[walker, burnin::thin, l_idx_param_2_plot[idx_ax]],
+                    alpha=0.5,
+                )
             else:
-                line = ax[idx_ax + start_idx_params].plot(x_plot[::thin], chains[walker, ::thin, l_idx_param_2_plot[idx_ax]], alpha=0.5)
-                ax[idx_ax + start_idx_params].vlines(burnin, vmin, vmax, color=line[0].get_color(), linestyles="dashed",
-                                                     alpha=0.5)
+                line = ax[idx_ax + start_idx_params].plot(
+                    x_plot[::thin], chains[walker, ::thin, l_idx_param_2_plot[idx_ax]], alpha=0.5
+                )
+                ax[idx_ax + start_idx_params].vlines(
+                    burnin, vmin, vmax, color=line[0].get_color(), linestyles="dashed", alpha=0.5
+                )
     ax[ndim_2_plot - (1 - start_idx_params)].set_xlabel("iteration")
     return fig
 
 
-def overplot_one_data_model(param, l_param_name, dataset, post_instance, datasim_kwargs={},
-                            multiplication_factor=1., oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
-                            show_title=True, show_legend=True,
-                            pl_data_kwargs=None, pl_model_kwargs=None, pl_resi_kwargs=None,
-                            kwargs_tick_params=None,
-                            ax_data=None, ax_resi=None):
+def overplot_one_data_model(
+    param,
+    l_param_name,
+    dataset,
+    post_instance,
+    datasim_kwargs={},
+    multiplication_factor=1.0,
+    oversamp=10,
+    supersamp_model=1,
+    exptime=exptime_Kepler,
+    show_title=True,
+    show_legend=True,
+    pl_data_kwargs=None,
+    pl_model_kwargs=None,
+    pl_resi_kwargs=None,
+    kwargs_tick_params=None,
+    ax_data=None,
+    ax_resi=None,
+):
     """Zoom on the data model overplot for one datasetself.
 
     :param np.array param: Vector of parameter values for the model
@@ -469,8 +585,16 @@ def overplot_one_data_model(param, l_param_name, dataset, post_instance, datasim
         created_ax_resi = True
     # Format the axes:
     if created_ax_data or created_ax_resi:
-        kwargs_tick_params_final = {'axis': 'both', 'which': 'major', 'direction': "in", 'bottom': "on",
-                                    'left': "on", 'top': "on", 'right': "on", 'reset': False}
+        kwargs_tick_params_final = {
+            "axis": "both",
+            "which": "major",
+            "direction": "in",
+            "bottom": "on",
+            "left": "on",
+            "top": "on",
+            "right": "on",
+            "reset": False,
+        }
         if kwargs_tick_params is not None:
             kwargs_tick_params_final.update(kwargs_tick_params)
     if created_ax_data:
@@ -481,7 +605,9 @@ def overplot_one_data_model(param, l_param_name, dataset, post_instance, datasim
     # Initialise the title (necessary here, because below the title will be completed with the planet
     # name if phasefold)
     filename_info = mgr_inst_dst.interpret_data_filename(dataset.dataset_name)
-    title = "{}_{}({})".format(filename_info["inst_fullcat"], filename_info["inst_name"], filename_info["number"])
+    title = "{}_{}({})".format(
+        filename_info["inst_fullcat"], filename_info["inst_name"], filename_info["number"]
+    )
     # Get the instrument model object and the noise model object
     inst_mod = post_instance.model.get_instmod(dataset.dataset_name)
     noisemod_cat = post_instance.model.get_noise_model(noise_cat=inst_mod.noise_model_category)
@@ -493,7 +619,10 @@ def overplot_one_data_model(param, l_param_name, dataset, post_instance, datasim
     # Extract the jitter information and compute data_err_new (which include the jitter):
     # jitter gives the value of the jitter (float)
     if noisemod_cat.has_jitter:
-        jitter = param[l_param_name.index(inst_mod.parameters["jitter"].full_name)] * multiplication_factor
+        jitter = (
+            param[l_param_name.index(inst_mod.parameters["jitter"].full_name)]
+            * multiplication_factor
+        )
         jitter_noisemod = noisemod_cat.get_jitter_model(inst_model_fullname=inst_mod.full_name)
         compute_jitteredvar = jitter_noisemod.get_compute_jitteredvar()
         data_err_new = sqrt(compute_jitteredvar(data_err=data_err, jitter=jitter))
@@ -503,7 +632,7 @@ def overplot_one_data_model(param, l_param_name, dataset, post_instance, datasim
     # Intialise the returns variables:
     ebconts_lines_labels = {}
     # Initialise keywords argument for the plotting of the data
-    pl_data_kwargs_final = {"fmt": ".", 'label': "data"}  # "color": "C0"
+    pl_data_kwargs_final = {"fmt": ".", "label": "data"}  # "color": "C0"
     if pl_data_kwargs is not None:
         pl_data_kwargs_final.update(pl_data_kwargs)
     pl_model_kwargs_final = {"model": {}, "model+GP": {}}  # "color": "C1", "color": "C2"
@@ -512,50 +641,99 @@ def overplot_one_data_model(param, l_param_name, dataset, post_instance, datasim
     pl_resi_kwargs_final = {"model": {}, "model+GP": {}}
     if pl_resi_kwargs is not None:
         pl_resi_kwargs_final.update(pl_resi_kwargs)
-    
+
     # plot the data
     ebcont_data = ax_data.errorbar(t_data, data, data_err_new, **pl_data_kwargs_final)
     # Plot the model
     tmin = t_data.min()
     tmax = t_data.max()
-    ebconts_lines_labels_model = plot_model(tmin=tmin, tmax=tmax, nt=nt * oversamp, dataset_name=dataset.dataset_name,
-                                            param=param, l_param_name=l_param_name,
-                                            post_instance=post_instance, key_obj=post_instance.model.key_whole,
-                                            datasim_kwargs=datasim_kwargs, exptime=exptime,
-                                            pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
-                                            ax=ax_data)
+    ebconts_lines_labels_model = plot_model(
+        tmin=tmin,
+        tmax=tmax,
+        nt=nt * oversamp,
+        dataset_name=dataset.dataset_name,
+        param=param,
+        l_param_name=l_param_name,
+        post_instance=post_instance,
+        key_obj=post_instance.model.key_whole,
+        datasim_kwargs=datasim_kwargs,
+        exptime=exptime,
+        pl_kwargs_model=pl_model_kwargs_final["model"],
+        pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
+        ax=ax_data,
+    )
     # Plot the residuals
     for key in ebconts_lines_labels_model.keys():
-        if not("color" in pl_resi_kwargs_final[key]):
-            pl_resi_kwargs_final[key]["color"] = ebconts_lines_labels_model[key]["ebcont or line"][0].get_color()
-    ebconts_lines_labels_resi = plot_residuals(dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name,
-                                               post_instance=post_instance, key_obj=post_instance.model.key_whole,
-                                               datasim_kwargs=datasim_kwargs, supersamp=supersamp_model, exptime=exptime,
-                                               pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
-                                               ax=ax_resi)
-    ebconts_lines_labels[f"axe"] = {"data": {"ebcont or line": ebcont_data, "label": pl_data_kwargs_final["label"]},
-                                    "model": {"ebcont or line": ebconts_lines_labels_model["model"]["ebcont or line"], "label": ebconts_lines_labels_model["model"]["label"]},
-                                    "residuals_model": {"ebcont or line": ebconts_lines_labels_resi["model"]["ebcont or line"], "label": ebconts_lines_labels_resi["model"]["label"]},
-                                    }
+        if "color" not in pl_resi_kwargs_final[key]:
+            pl_resi_kwargs_final[key]["color"] = ebconts_lines_labels_model[key]["ebcont or line"][
+                0
+            ].get_color()
+    ebconts_lines_labels_resi = plot_residuals(
+        dataset_name=dataset.dataset_name,
+        param=param,
+        l_param_name=l_param_name,
+        post_instance=post_instance,
+        key_obj=post_instance.model.key_whole,
+        datasim_kwargs=datasim_kwargs,
+        supersamp=supersamp_model,
+        exptime=exptime,
+        pl_kwargs_model=pl_resi_kwargs_final["model"],
+        pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
+        ax=ax_resi,
+    )
+    ebconts_lines_labels["axe"] = {
+        "data": {"ebcont or line": ebcont_data, "label": pl_data_kwargs_final["label"]},
+        "model": {
+            "ebcont or line": ebconts_lines_labels_model["model"]["ebcont or line"],
+            "label": ebconts_lines_labels_model["model"]["label"],
+        },
+        "residuals_model": {
+            "ebcont or line": ebconts_lines_labels_resi["model"]["ebcont or line"],
+            "label": ebconts_lines_labels_resi["model"]["label"],
+        },
+    }
     if "model+GP" in ebconts_lines_labels_model:
-        ebconts_lines_labels[f"axe"]["model+GP"] = {"ebcont or line": ebconts_lines_labels_model["model+GP"]["ebcont or line"], "label": ebconts_lines_labels_model["model+GP"]["label"]}
+        ebconts_lines_labels["axe"]["model+GP"] = {
+            "ebcont or line": ebconts_lines_labels_model["model+GP"]["ebcont or line"],
+            "label": ebconts_lines_labels_model["model+GP"]["label"],
+        }
     if "model+GP" in ebconts_lines_labels_resi:
-        ebconts_lines_labels_resi["residuals_model+GP"] = {"ebcont or line": ebconts_lines_labels_resi["model+GP"]["ebcont or line"], "label": ebconts_lines_labels_resi["model+GP"]["label"]}
+        ebconts_lines_labels_resi["residuals_model+GP"] = {
+            "ebcont or line": ebconts_lines_labels_resi["model+GP"]["ebcont or line"],
+            "label": ebconts_lines_labels_resi["model+GP"]["label"],
+        }
     # Print the title if required
     if show_title:
         ax_data.set_title(title)
     # Plot the legend
     if show_legend:
-        ax_data.legend(loc='upper right', shadow=True)
+        ax_data.legend(loc="upper right", shadow=True)
     return ebconts_lines_labels
 
 
-def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_instance, l_datasets=None, datasim_kwargs={},
-                        oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
-                        phasefold=False, phasefold_kwargs=None,
-                        plot_height=2, plot_width=8, fig_kwargs=None, gs_kwargs=None,
-                        kwargs_gs_from_sps=None, kwargs_add_axeswithsharex=None, kwargs_tick_params=None,
-                        kwargs_tl=None, return_modelsNresiduals=False):
+def overplot_data_model(
+    param,
+    l_param_name,
+    datasim_dbf,
+    dataset_db,
+    post_instance,
+    l_datasets=None,
+    datasim_kwargs={},
+    oversamp=10,
+    supersamp_model=1,
+    exptime=exptime_Kepler,
+    phasefold=False,
+    phasefold_kwargs=None,
+    plot_height=2,
+    plot_width=8,
+    fig_kwargs=None,
+    gs_kwargs=None,
+    kwargs_gs_from_sps=None,
+    kwargs_add_axeswithsharex=None,
+    kwargs_tick_params=None,
+    kwargs_tl=None,
+    return_modelsNresiduals=False,
+):
     """Overplot datasets and model for each dataset and provide the residuals.
 
     :param np.array param: Vector of parameter values for the model
@@ -617,15 +795,25 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
     # Set defaults values of fig_kwargs
     if fig_kwargs is None:
         fig_kwargs = {}
-    fig = figure(figsize=(plot_width, nb_dataset2plot * plot_height), constrained_layout=True, **fig_kwargs)
+    fig = figure(
+        figsize=(plot_width, nb_dataset2plot * plot_height), constrained_layout=True, **fig_kwargs
+    )
     gs_kwargs_final = {"bottom": 0.04, "top": 0.9, "left": 0.07, "right": 0.82}
     if gs_kwargs is not None:
         gs_kwargs_final.update(gs_kwargs)
     gs = GridSpec(nrows=nb_dataset2plot, ncols=1, figure=fig, **gs_kwargs_final)
 
     # Define the keywords for tick_params:
-    kwargs_tick_params_final = {'axis': 'both', 'which': 'both', 'direction': "in", 'bottom': "on",
-                                'left': "on", 'top': "on", 'right': "on", 'reset': False}
+    kwargs_tick_params_final = {
+        "axis": "both",
+        "which": "both",
+        "direction": "in",
+        "bottom": "on",
+        "left": "on",
+        "top": "on",
+        "right": "on",
+        "reset": False,
+    }
     if kwargs_tick_params is not None:
         kwargs_tick_params_final.update(kwargs_tick_params)
 
@@ -667,9 +855,13 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
             # Get the number of planets in the system.
             nplanet = len(phasefold_kwargs["planets"])
             # Create the two axes data+model and residuals per planet
-            (axes_data, axes_resi
-             ) = add_twoaxeswithsharex_perplanet(gs[ii_dataset2plot], nplanet=nplanet, fig=fig, gs_from_sps_kw=gs_from_sps_kw_final,
-                                                 add_axeswithsharex_kw=add_axeswithsharex_kw_final)
+            (axes_data, axes_resi) = add_twoaxeswithsharex_perplanet(
+                gs[ii_dataset2plot],
+                nplanet=nplanet,
+                fig=fig,
+                gs_from_sps_kw=gs_from_sps_kw_final,
+                add_axeswithsharex_kw=add_axeswithsharex_kw_final,
+            )
             for ax_data_i, ax_resi_i in zip(axes_data, axes_resi):
                 ax_data_i.xaxis.set_minor_locator(AutoMinorLocator())
                 ax_data_i.yaxis.set_minor_locator(AutoMinorLocator())
@@ -679,19 +871,34 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
                 ax_resi_i.yaxis.set_minor_locator(AutoMinorLocator())
                 ax_resi_i.tick_params(**kwargs_tick_params_final)
             # Produce the phase-folded plots for each planet
-            for planet_name, P, tc, ax_data, ax_resi in zip(phasefold_kwargs["planets"],
-                                                            phasefold_kwargs["P"],
-                                                            phasefold_kwargs["tc"],
-                                                            axes_data, axes_resi):
+            for planet_name, P, tc, ax_data, ax_resi in zip(
+                phasefold_kwargs["planets"],
+                phasefold_kwargs["P"],
+                phasefold_kwargs["tc"],
+                axes_data,
+                axes_resi,
+            ):
                 modelsNresiduals[dataset.dataset_name][planet_name] = {}
-                ebconts_lines_labels = overplot_one_data_model(param=param, l_param_name=l_param_name,
-                                                               dataset=dataset, datasim_kwargs=datasim_kwargs, post_instance=post_instance,
-                                                               oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
-                                                               show_title=True, show_legend=False, ax_data=ax_data, ax_resi=ax_resi)
+                ebconts_lines_labels = overplot_one_data_model(
+                    param=param,
+                    l_param_name=l_param_name,
+                    dataset=dataset,
+                    datasim_kwargs=datasim_kwargs,
+                    post_instance=post_instance,
+                    oversamp=oversamp,
+                    supersamp_model=supersamp_model,
+                    exptime=exptime,
+                    show_title=True,
+                    show_legend=False,
+                    ax_data=ax_data,
+                    ax_resi=ax_resi,
+                )
         else:
             modelsNresiduals[dataset.dataset_name]["whole"] = {}
             # Create the two axes data+model and residuals
-            ax_data, ax_resi = add_twoaxeswithsharex(gs[ii_dataset2plot], fig=fig, gs_from_sps_kw=add_axeswithsharex_kw_final)
+            ax_data, ax_resi = add_twoaxeswithsharex(
+                gs[ii_dataset2plot], fig=fig, gs_from_sps_kw=add_axeswithsharex_kw_final
+            )
             ax_data.xaxis.set_minor_locator(AutoMinorLocator())
             ax_data.yaxis.set_minor_locator(AutoMinorLocator())
             ax_data.tick_params(**kwargs_tick_params_final)
@@ -700,15 +907,26 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
             ax_resi.yaxis.set_minor_locator(AutoMinorLocator())
             ax_resi.tick_params(**kwargs_tick_params_final)
             # Produce the plots
-            ebconts_lines_labels = overplot_one_data_model(param=param, l_param_name=l_param_name, dataset=dataset,
-                                                           datasim_kwargs=datasim_kwargs, post_instance=post_instance,
-                                                           oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
-                                                           show_title=True,
-                                                           show_legend=False, ax_data=ax_data, ax_resi=ax_resi)
+            ebconts_lines_labels = overplot_one_data_model(
+                param=param,
+                l_param_name=l_param_name,
+                dataset=dataset,
+                datasim_kwargs=datasim_kwargs,
+                post_instance=post_instance,
+                oversamp=oversamp,
+                supersamp_model=supersamp_model,
+                exptime=exptime,
+                show_title=True,
+                show_legend=False,
+                ax_data=ax_data,
+                ax_resi=ax_resi,
+            )
         for key_axe_ii in ebconts_lines_labels.keys():
             for key_data_mod_resi in ebconts_lines_labels[key_axe_ii].keys():
                 dico_ebcont_line_label = ebconts_lines_labels[key_axe_ii][key_data_mod_resi]
-                if not(dico_ebcont_line_label["label"] in labels_4_legend) and (dico_ebcont_line_label["label"] is not None):
+                if dico_ebcont_line_label["label"] not in labels_4_legend and (
+                    dico_ebcont_line_label["label"] is not None
+                ):
                     labels_4_legend.append(dico_ebcont_line_label["label"])
                     if len(dico_ebcont_line_label["ebcont or line"]) > 1:
                         ebconts_lines_4_legend.append(dico_ebcont_line_label["ebcont or line"][0])
@@ -717,11 +935,12 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
 
         ii_dataset2plot += 1
     # Create the legend for the full figure
-    fig.legend(handles=ebconts_lines_4_legend,     # The line objects
-               labels=labels_4_legend,   # The labels for each line
-               loc="center right",   # Position of legend
-               borderaxespad=1,    # Small spacing around legend box
-               )
+    fig.legend(
+        handles=ebconts_lines_4_legend,  # The line objects
+        labels=labels_4_legend,  # The labels for each line
+        loc="center right",  # Position of legend
+        borderaxespad=1,  # Small spacing around legend box
+    )
     if kwargs_tl is None:
         kwargs_tl = {}
     # fig.tight_layout(**kwargs_tl)
@@ -729,10 +948,24 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
         return modelsNresiduals
 
 
-def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance, key_obj=None, datasim_kwargs=None,
-               multiplication_factor=1., supersamp=1, exptime=exptime_Kepler,
-               pl_kwargs_model=None, pl_kwargs_modelandGP=None, show_modelandGP=True,
-               ax=None):
+def plot_model(
+    tmin,
+    tmax,
+    nt,
+    dataset_name,
+    param,
+    l_param_name,
+    post_instance,
+    key_obj=None,
+    datasim_kwargs=None,
+    multiplication_factor=1.0,
+    supersamp=1,
+    exptime=exptime_Kepler,
+    pl_kwargs_model=None,
+    pl_kwargs_modelandGP=None,
+    show_modelandGP=True,
+    ax=None,
+):
     """Plot the model.
 
     Arguments
@@ -786,11 +1019,17 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
     tmax_plus = tmax + tsamp  # Add 1 point after tmax
     nt += 2
     t_plot = linspace(tmin_moins, tmax_plus, nt)
-    model, model_err = post_instance.compute_model(tsim=t_plot, dataset_name=dataset_name,
-                                                   param=param, l_param_name=l_param_name,
-                                                   key_obj=key_obj, datasim_kwargs=datasim_kwargs,
-                                                   supersamp=supersamp, exptime=exptime,
-                                                   include_gp=True)
+    model, model_err = post_instance.compute_model(
+        tsim=t_plot,
+        dataset_name=dataset_name,
+        param=param,
+        l_param_name=l_param_name,
+        key_obj=key_obj,
+        datasim_kwargs=datasim_kwargs,
+        supersamp=supersamp,
+        exptime=exptime,
+        include_gp=True,
+    )
     model *= multiplication_factor
     if model_err is not None:
         model_err *= multiplication_factor
@@ -799,9 +1038,9 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
     ax = __get_default_ax(ax=ax)
 
     # Intialise the returns variables:
-    ebconts_lines_labels = {}   # returned dictionary
+    ebconts_lines_labels = {}  # returned dictionary
     # Define the keyword arguments for the plot of the model
-    kwarg_model = {"label": "model", "color": "g", "fmt": "-", "alpha": 1.}
+    kwarg_model = {"label": "model", "color": "g", "fmt": "-", "alpha": 1.0}
     if pl_kwargs_model is not None:
         kwarg_model.update(pl_kwargs_model)
     # Plot the model
@@ -814,12 +1053,18 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
     inst_mod_obj = post_instance.model.get_instmod(dataset_name=dataset_name)
     noise_model = post_instance.model.get_noise_model(noise_cat=inst_mod_obj.noise_model_category)
     if noise_model.has_GP and show_modelandGP:
-        kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "-", "alpha": 1.}
-        GP, GP_err = post_instance.compute_model(tsim=t_plot, dataset_name=dataset_name,
-                                                 param=param, l_param_name=l_param_name,
-                                                 key_obj="GP", datasim_kwargs=datasim_kwargs,
-                                                 supersamp=supersamp, exptime=exptime,
-                                                 include_gp=True)
+        kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "-", "alpha": 1.0}
+        GP, GP_err = post_instance.compute_model(
+            tsim=t_plot,
+            dataset_name=dataset_name,
+            param=param,
+            l_param_name=l_param_name,
+            key_obj="GP",
+            datasim_kwargs=datasim_kwargs,
+            supersamp=supersamp,
+            exptime=exptime,
+            include_gp=True,
+        )
 
         GP *= multiplication_factor
         if GP_err is not None:
@@ -830,8 +1075,9 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
         kwarg_GP_pred_var = kwarg_GP.copy()
         kwarg_GP_pred_var["alpha"] = 0.4
         kwarg_GP_pred_var.pop("fmt")
-        GP_pred_var = ax.fill_between(t_plot, model + GP - GP_err, model + GP + GP_err,
-                                      **kwarg_GP_pred_var)
+        GP_pred_var = ax.fill_between(
+            t_plot, model + GP - GP_err, model + GP + GP_err, **kwarg_GP_pred_var
+        )
         ebcont_wGP = ax.errorbar(t_plot, model, **kwarg_GP)
         ebconts_lines_labels["model+GP"] = {}
         ebconts_lines_labels["model+GP"]["ebcont or line"] = ebcont_wGP
@@ -839,11 +1085,22 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
     return ebconts_lines_labels
 
 
-def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=None,
-                   datasim_kwargs=None, multiplication_factor=1.,
-                   supersamp=1, exptime=exptime_Kepler, bin_size=0.,
-                   pl_kwargs_model=None, pl_kwargs_modelandGP=None, show_residuals_model_only=True,
-                   ax=None):
+def plot_residuals(
+    dataset_name,
+    param,
+    l_param_name,
+    post_instance,
+    key_obj=None,
+    datasim_kwargs=None,
+    multiplication_factor=1.0,
+    supersamp=1,
+    exptime=exptime_Kepler,
+    bin_size=0.0,
+    pl_kwargs_model=None,
+    pl_kwargs_modelandGP=None,
+    show_residuals_model_only=True,
+    ax=None,
+):
     """Plot the residuals of the model.
 
     Arguments
@@ -912,11 +1169,17 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
     data = dataset.get_data() * multiplication_factor
     data_err = dataset.get_data_err() * multiplication_factor
     # Compute residual
-    model, model_err = post_instance.compute_model(tsim=t_data, dataset_name=dataset_name,
-                                                                         param=param, l_param_name=l_param_name,
-                                                                         key_obj=key_obj, datasim_kwargs=datasim_kwargs,
-                                                                         supersamp=supersamp, exptime=exptime,
-                                                                         include_gp=True)
+    model, model_err = post_instance.compute_model(
+        tsim=t_data,
+        dataset_name=dataset_name,
+        param=param,
+        l_param_name=l_param_name,
+        key_obj=key_obj,
+        datasim_kwargs=datasim_kwargs,
+        supersamp=supersamp,
+        exptime=exptime,
+        include_gp=True,
+    )
     model *= multiplication_factor
     if model_err is not None:
         model_err *= multiplication_factor
@@ -926,13 +1189,19 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
     # Compute GP if there is a GP and not (show_residuals_model_only)
     inst_mod_obj = post_instance.model.get_instmod(dataset_name=dataset_name)
     noise_model = post_instance.model.get_noise_model(noise_cat=inst_mod_obj.noise_model_category)
-    if noise_model.has_GP and not(show_residuals_model_only):
-        kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "-", "alpha": 1.}
-        GP, GP_err = post_instance.compute_model(tsim=t_data, dataset_name=dataset_name,
-                                                 param=param, l_param_name=l_param_name,
-                                                 key_obj="GP", datasim_kwargs=datasim_kwargs,
-                                                 supersamp=supersamp, exptime=exptime,
-                                                 include_gp=True)
+    if noise_model.has_GP and not (show_residuals_model_only):
+        kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "-", "alpha": 1.0}
+        GP, GP_err = post_instance.compute_model(
+            tsim=t_data,
+            dataset_name=dataset_name,
+            param=param,
+            l_param_name=l_param_name,
+            key_obj="GP",
+            datasim_kwargs=datasim_kwargs,
+            supersamp=supersamp,
+            exptime=exptime,
+            include_gp=True,
+        )
 
         GP *= multiplication_factor
         if GP_err is not None:
@@ -945,7 +1214,10 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
     instmod_obj = post_instance.model.get_instmod(dataset_name)
     noisemod_cat = post_instance.model.get_noise_model(noise_cat=instmod_obj.noise_model_category)
     if noisemod_cat.has_jitter:
-        jitter = param[l_param_name.index(instmod_obj.parameters["jitter"].full_name)] * multiplication_factor
+        jitter = (
+            param[l_param_name.index(instmod_obj.parameters["jitter"].full_name)]
+            * multiplication_factor
+        )
         jitter_noisemod = noisemod_cat.get_jitter_model(inst_model_fullname=instmod_obj.full_name)
         compute_jitteredvar = jitter_noisemod.get_compute_jitteredvar()
         data_err_new = sqrt(compute_jitteredvar(data_err=data_err, jitter=jitter))
@@ -956,7 +1228,7 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
     ebconts_lines_labels = {}  # returned dictionary
     # Plot the residuals
     pl_kwargs_2_use = {"fmt": "."}
-    if noise_model.has_GP and not(show_residuals_model_only):
+    if noise_model.has_GP and not (show_residuals_model_only):
         pl_kwargs_2_use["label"] = "resi model+GP"
         pl_kwargs_user_2_use = pl_kwargs_modelandGP.copy()
     else:
@@ -975,10 +1247,10 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
             pl_kwarg_jitter["alpha"] = 0.5
     pl_kwarg_jitter.update(dico_jitter)
     pl_kwarg_jitter["fmt"] = "none"
-    
+
     ebcont = ax.errorbar(t_data, residual, data_err, **pl_kwargs_2_use)
     if noisemod_cat.has_jitter:
-        if not("ecolor" in pl_kwarg_jitter):
+        if "ecolor" not in pl_kwarg_jitter:
             pl_kwarg_jitter["ecolor"] = ebcont[0].get_color()
         ax.errorbar(t_data, residual, data_err_new, **pl_kwarg_jitter)
     ebconts_lines_labels["model"] = {}
@@ -1011,9 +1283,22 @@ def apply_zoom(zoom, base_array, arrays=None):
     return zoomed_arrays, idx_zoom
 
 
-def plot_phase_folded_timeserie(t_data, data, Per, tref, phasefold_central_phase=0., data_err=None, only_errorbar=False,
-                                show_time_from_tref=False, time_fact=24,
-                                zoom=None, ax=None, pl_kwargs=None, auto_ylims=False, auto_ylims_kwargs=None):
+def plot_phase_folded_timeserie(
+    t_data,
+    data,
+    Per,
+    tref,
+    phasefold_central_phase=0.0,
+    data_err=None,
+    only_errorbar=False,
+    show_time_from_tref=False,
+    time_fact=24,
+    zoom=None,
+    ax=None,
+    pl_kwargs=None,
+    auto_ylims=False,
+    auto_ylims_kwargs=None,
+):
     """Plot a phase folded representation of a time series.
 
     Per and tref needs to have the same unit than the t
@@ -1069,7 +1354,9 @@ def plot_phase_folded_timeserie(t_data, data, Per, tref, phasefold_central_phase
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
     # Obtain the phases with respect to some ephemerid P and tc
-    phases = foldAt(t_data, Per, T0=(tref + Per * (phasefold_central_phase - 0.5))) + (phasefold_central_phase - 0.5)
+    phases = foldAt(t_data, Per, T0=(tref + Per * (phasefold_central_phase - 0.5))) + (
+        phasefold_central_phase - 0.5
+    )
     # Sort with respect to phase
     sortIndi = argsort(phases)
     # If data error provided
@@ -1080,10 +1367,14 @@ def plot_phase_folded_timeserie(t_data, data, Per, tref, phasefold_central_phase
     phase_sort = phases[sortIndi]
     data_sort = data[sortIndi]
     # Perform zoom if needed
-    if (zoom is not None):
+    if zoom is not None:
         if (zoom[0] is not None) and (zoom[1] is not None):
-            extra_arrays_to_zoom = [data_sort] if data_err is None else [data_sort, data_err_new_sort]
-            zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom, base_array=phase_sort, arrays=extra_arrays_to_zoom)
+            extra_arrays_to_zoom = (
+                [data_sort] if data_err is None else [data_sort, data_err_new_sort]
+            )
+            zoomed_arrays, idx_zoom = apply_zoom(
+                zoom=zoom, base_array=phase_sort, arrays=extra_arrays_to_zoom
+            )
             phase_sort = zoomed_arrays[0]
             data_sort = zoomed_arrays[1]
             data_err_new_sort = None if data_err is None else zoomed_arrays[2]
@@ -1116,7 +1407,9 @@ def add_twoaxeswithsharex(subplotspec, fig, sharey=None, gs_from_sps_kw=None):
         gs_from_sps_kw = {}
     if "height_ratios" not in gs_from_sps_kw:
         gs_from_sps_kw["height_ratios"] = (4, 1)
-    return tuple(add_axeswithsharex(subplotspec, fig, 2, sharey=sharey, gs_from_sps_kw=gs_from_sps_kw))
+    return tuple(
+        add_axeswithsharex(subplotspec, fig, 2, sharey=sharey, gs_from_sps_kw=gs_from_sps_kw)
+    )
 
 
 def add_axeswithsharex(subplotspec, fig, nb_axes, sharey=None, gs_from_sps_kw=None):
@@ -1149,7 +1442,9 @@ def add_axeswithsharex(subplotspec, fig, nb_axes, sharey=None, gs_from_sps_kw=No
     ax0.tick_params(labelbottom="off")
     # ax0.tick_params(axis="both", which="both")
     fig.add_subplot(ax0)
-    l_axes = [ax0, ]
+    l_axes = [
+        ax0,
+    ]
     for idx in range(1, nb_axes):
         l_axes.append(Subplot(fig, gs[idx], sharex=ax0, sharey=sharey[idx]))
         l_axes[idx].locator_params(axis="y", tight=True, nbins=4)
@@ -1158,17 +1453,28 @@ def add_axeswithsharex(subplotspec, fig, nb_axes, sharey=None, gs_from_sps_kw=No
     return l_axes
 
 
-def add_twoaxeswithsharex_perplanet(subplotspec, nplanet, fig, sharey=None, gs_from_sps_kw=None, add_axeswithsharex_kw=None):
+def add_twoaxeswithsharex_perplanet(
+    subplotspec, nplanet, fig, sharey=None, gs_from_sps_kw=None, add_axeswithsharex_kw=None
+):
     """Add two axes per planet to a subplotspec (created with gridspec) for data and residual plot.
 
     Kept for retrocompatibility.
     """
-    axes_planets = add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes=2, sharey=sharey,
-                                                gs_from_sps_kw=gs_from_sps_kw, add_axeswithsharex_kw=add_axeswithsharex_kw)
+    axes_planets = add_axeswithsharex_perplanet(
+        subplotspec,
+        nplanet,
+        fig,
+        nb_axes=2,
+        sharey=sharey,
+        gs_from_sps_kw=gs_from_sps_kw,
+        add_axeswithsharex_kw=add_axeswithsharex_kw,
+    )
     return [axes[0] for axes in axes_planets], [axes[1] for axes in axes_planets]
 
 
-def add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes, sharey=None, gs_from_sps_kw=None, add_axeswithsharex_kw=None):
+def add_axeswithsharex_perplanet(
+    subplotspec, nplanet, fig, nb_axes, sharey=None, gs_from_sps_kw=None, add_axeswithsharex_kw=None
+):
     """Add two axes per planet to a subplotspec (created with gridspec) for data and residual plot.
 
     Arguments
@@ -1193,11 +1499,17 @@ def add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes, sharey=None
     for ii, gs_elem in enumerate(gs):
         if (sharey is True) and (ii > 0):
             sharey = axes_planets[0]
-        axes_planets.append(add_axeswithsharex(gs_elem, fig, nb_axes=nb_axes, sharey=sharey, gs_from_sps_kw=add_axeswithsharex_kw))
+        axes_planets.append(
+            add_axeswithsharex(
+                gs_elem, fig, nb_axes=nb_axes, sharey=sharey, gs_from_sps_kw=add_axeswithsharex_kw
+            )
+        )
     return axes_planets
 
 
-def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, verbose=1, plot=False):
+def acceptancefraction_selection(
+    acceptance_fraction, sig_fact=3.0, quantile=75, verbose=1, plot=False
+):
     """Return selected walkers based on the acceptance fraction.
 
     The walkers are selected if:
@@ -1212,14 +1524,15 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
     :return list_of_int l_selected_walker: list of selected walkers
     :return int nb_rejected: Number of rejected walkers
     """
-    logger.info("Acceptance_fraction selection parameters: reference quantile = {quantile} %; sigma_clip at {sigma} sigma"
-                "".format(quantile=quantile, sigma=sig_fact))
+    logger.info(
+        f"Acceptance_fraction selection parameters: reference quantile = {quantile} %; sigma_clip at {sig_fact} sigma"
+    )
     percentile_acceptance_frac = nanpercentile(acceptance_fraction, quantile)
     mad_acceptance_frac = mad(acceptance_fraction, axis=None, nan_policy="omit")
     if verbose == 1:
-        logger.info("Acceptance fraction of the walkers: {}\nquantile {}%: {}, MAD:{}"
-                    "".format(acceptance_fraction, quantile, percentile_acceptance_frac,
-                              mad_acceptance_frac))
+        logger.info(
+            f"Acceptance fraction of the walkers: {acceptance_fraction}\nquantile {quantile}%: {percentile_acceptance_frac}, MAD:{mad_acceptance_frac}"
+        )
     threshold = percentile_acceptance_frac - sig_fact * mad_acceptance_frac
     l_selected_walker = where(acceptance_fraction > threshold)[0]
     if plot:
@@ -1227,20 +1540,44 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
         fig, ax = subplots(nrows=2)
         ax[0].hist(acceptance_fraction * 100, bins="auto")
         ylims = ax[0].get_ylim()
-        ax[0].vlines(percentile_acceptance_frac * 100, *ylims, color="k", linestyle="dashed",
-                     label=f"{quantile} % percentile value = {(percentile_acceptance_frac * 100):.2f}")
-        ax[0].vlines(threshold * 100, *ylims, color="r", label=f"threshold ({sig_fact} sigma) = {(threshold * 100):.2f}")
+        ax[0].vlines(
+            percentile_acceptance_frac * 100,
+            *ylims,
+            color="k",
+            linestyle="dashed",
+            label=f"{quantile} % percentile value = {(percentile_acceptance_frac * 100):.2f}",
+        )
+        ax[0].vlines(
+            threshold * 100,
+            *ylims,
+            color="r",
+            label=f"threshold ({sig_fact} sigma) = {(threshold * 100):.2f}",
+        )
         ax[0].set_ylim(ylims)
         ax[0].set_xlabel("Acceptance fraction [%]")
         ax[0].set_ylabel("Counts")
-        ax[0].set_title(f"Histogram of the acceptance fraction\nMAD = {(mad_acceptance_frac * 100):.2f} %")
+        ax[0].set_title(
+            f"Histogram of the acceptance fraction\nMAD = {(mad_acceptance_frac * 100):.2f} %"
+        )
         ax[0].legend()
         # Cumulative histogram
         ax[1].hist(acceptance_fraction * 100, bins="auto", cumulative=True, density=True)
         xlims = ax[1].get_xlim()
         ylims = ax[1].get_ylim()
-        ax[1].hlines(quantile / 100, xlims[0], percentile_acceptance_frac * 100, color="k", linestyle="dashed")
-        ax[1].vlines(percentile_acceptance_frac * 100, ylims[0], quantile / 100, color="k", linestyle="dashed")
+        ax[1].hlines(
+            quantile / 100,
+            xlims[0],
+            percentile_acceptance_frac * 100,
+            color="k",
+            linestyle="dashed",
+        )
+        ax[1].vlines(
+            percentile_acceptance_frac * 100,
+            ylims[0],
+            quantile / 100,
+            color="k",
+            linestyle="dashed",
+        )
         ax[1].vlines(threshold * 100, *ylims, color="r")
         ax[1].set_ylim(ylims)
         ax[1].set_xlim(xlims)
@@ -1250,12 +1587,13 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
         fig.tight_layout()
     nb_rejected = acceptance_fraction.shape[0] - len(l_selected_walker)
     if verbose == 1:
-        logger.info("Number of rejected walkers: {}/{}".format(nb_rejected,
-                                                               acceptance_fraction.shape[0]))
+        logger.info(f"Number of rejected walkers: {nb_rejected}/{acceptance_fraction.shape[0]}")
     return l_selected_walker, nb_rejected
 
 
-def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walker=50, verbose=1, plot=False):
+def lnposterior_selection(
+    lnprobability, sig_fact=3.0, quantile=75, quantile_walker=50, verbose=1, plot=False
+):
     """Return selected walker based on the acceptance fraction.
 
     :param np.array lnprobability: Values of the lnprobability taken by each walker at each iteration
@@ -1269,49 +1607,78 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     :return list_of_int l_selected_walker: list of selected walker
     :return int nb_rejected:  number of rejected walker
     """
-    logger.info("lnposterior selection parameters: reference quantile of walker = {quantile_walker} %;"
-                "reference quantile across walkers = {quantile} %; sigma_clip at {sigma} sigma"
-                "".format(quantile_walker=quantile_walker, quantile=quantile, sigma=sig_fact))
+    logger.info(
+        f"lnposterior selection parameters: reference quantile of walker = {quantile_walker} %;"
+        f"reference quantile across walkers = {quantile} %; sigma_clip at {sig_fact} sigma"
+    )
     walkers_percentile_lnposterior = nanpercentile(lnprobability, quantile_walker, axis=1)
     percentile_lnposterior = nanpercentile(walkers_percentile_lnposterior, quantile)
     mad_lnposterior = mad(walkers_percentile_lnposterior, axis=None, nan_policy="omit")
     if verbose == 1:
-        logger.info("lnposterior of the walkers: {}\nquantile {}%: {}, MAD:{}"
-                    "".format(walkers_percentile_lnposterior, quantile, percentile_lnposterior,
-                              mad_lnposterior))
+        logger.info(
+            f"lnposterior of the walkers: {walkers_percentile_lnposterior}\nquantile {quantile}%: {percentile_lnposterior}, MAD:{mad_lnposterior}"
+        )
     threshold = percentile_lnposterior - (sig_fact * mad_lnposterior)
     if plot:
         # Histogram
         fig, ax = subplots(nrows=2)
-        ax[0], did_log10, nb_points_sigma_clip = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax[0])
+        ax[0], did_log10, nb_points_sigma_clip = hist_lnprob(
+            walkers_percentile_lnposterior, n_bins=20, ax=ax[0]
+        )
         ylims = ax[0].get_ylim()
         label_perc = f"{quantile} % percentile value = {percentile_lnposterior:.2f}"
         label_thresh = f"threshold ({sig_fact} sigma) = {threshold:.2f}"
         if did_log10:
-            ax[0].vlines(np.log10(percentile_lnposterior), *ylims, color="k", linestyle="dashed",
-                         label=label_perc)
+            ax[0].vlines(
+                np.log10(percentile_lnposterior),
+                *ylims,
+                color="k",
+                linestyle="dashed",
+                label=label_perc,
+            )
             ax[0].vlines(np.log10(threshold), *ylims, color="r", label=label_thresh)
         else:
-            ax[0].vlines(percentile_lnposterior, *ylims, color="k", linestyle="dashed",
-                         label=label_perc)
+            ax[0].vlines(
+                percentile_lnposterior, *ylims, color="k", linestyle="dashed", label=label_perc
+            )
             ax[0].vlines(threshold, *ylims, color="r", label=label_thresh)
         ax[0].set_ylim(ylims)
         ax[0].set_ylabel("Counts")
-        ax[0].set_title(f"Histogram of the lnposterior\nEach walker is represented by its {quantile_walker} value\nMAD = {(mad_lnposterior):.2f}\nPoints removed for plotting = {nb_points_sigma_clip}")
+        ax[0].set_title(
+            f"Histogram of the lnposterior\nEach walker is represented by its {quantile_walker} value\nMAD = {(mad_lnposterior):.2f}\nPoints removed for plotting = {nb_points_sigma_clip}"
+        )
         ax[0].legend()
         # Cumulative histogram
-        ax[1], did_log10, nb_point_sigma_clip = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax[1], cumulative=True, density=True)
+        ax[1], did_log10, nb_point_sigma_clip = hist_lnprob(
+            walkers_percentile_lnposterior, n_bins=20, ax=ax[1], cumulative=True, density=True
+        )
         ylims = ax[1].get_ylim()
         xlims = ax[1].get_xlim()
         label_perc = f"{quantile} % percentile value = {percentile_lnposterior:.2f}"
         label_thresh = f"threshold = {threshold:.2f}"
         if did_log10:
-            ax[1].hlines(quantile / 100, xlims[0], np.log10(percentile_lnposterior), color="k", linestyle="dashed")
-            ax[1].vlines(np.log10(percentile_lnposterior), ylims[0], quantile / 100, color="k", linestyle="dashed")
+            ax[1].hlines(
+                quantile / 100,
+                xlims[0],
+                np.log10(percentile_lnposterior),
+                color="k",
+                linestyle="dashed",
+            )
+            ax[1].vlines(
+                np.log10(percentile_lnposterior),
+                ylims[0],
+                quantile / 100,
+                color="k",
+                linestyle="dashed",
+            )
             ax[1].vlines(np.log10(threshold), *ylims, color="r")
         else:
-            ax[1].hlines(quantile / 100, xlims[0], percentile_lnposterior, color="k", linestyle="dashed")
-            ax[1].vlines(percentile_lnposterior, ylims[0], quantile / 100, color="k", linestyle="dashed")
+            ax[1].hlines(
+                quantile / 100, xlims[0], percentile_lnposterior, color="k", linestyle="dashed"
+            )
+            ax[1].vlines(
+                percentile_lnposterior, ylims[0], quantile / 100, color="k", linestyle="dashed"
+            )
             ax[1].vlines(threshold, *ylims, color="r")
         ax[1].set_ylim(ylims)
         ax[1].set_xlim(xlims)
@@ -1321,14 +1688,22 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     l_selected_walker = where(walkers_percentile_lnposterior > threshold)[0]
     nb_rejected = lnprobability.shape[0] - len(l_selected_walker)
     if verbose == 1:
-        logger.info("Number of rejected walkers: {}/{}".format(nb_rejected, lnprobability.shape[0]))
+        logger.info(f"Number of rejected walkers: {nb_rejected}/{lnprobability.shape[0]}")
     return l_selected_walker, walkers_percentile_lnposterior[l_selected_walker]
 
 
-def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None, iterations_indexes=None,
-                      weights_name=None,
-                      lnprobability_name="lnposterior",
-                      verbose=1, force_finite=True):
+def get_fitted_values(
+    chainI,
+    method="MAP",
+    l_param_name=None,
+    l_walker=None,
+    l_burnin=None,
+    iterations_indexes=None,
+    weights_name=None,
+    lnprobability_name="lnposterior",
+    verbose=1,
+    force_finite=True,
+):
     """Return the fitted values from the sampler.
 
     Arguments
@@ -1357,8 +1732,13 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
     l_param_name_out = copy(chainI.param_names)
     if method == "median":
         # import pdb; pdb.set_trace()
-        clean_flat_chain = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes,
-                                               force_finite=force_finite)
+        clean_flat_chain = get_clean_flatchain(
+            chainI,
+            l_walker=l_walker,
+            l_burnin=l_burnin,
+            iterations_indexes=iterations_indexes,
+            force_finite=force_finite,
+        )
         if weights_name is None:
             res = np.nanmedian(clean_flat_chain, axis=0)
         else:
@@ -1368,7 +1748,14 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
                     del_idx.append(i_dim)
                     l_param_name_out.remove(param_name)
             clean_flat_chain = np.delete(clean_flat_chain, del_idx, axis=1)
-            res = DescrStatsW(clean_flat_chain, weights=clean_flat_chain[..., l_param_name_out.index(weights_name)]).quantile(0.5).values[0]
+            res = (
+                DescrStatsW(
+                    clean_flat_chain,
+                    weights=clean_flat_chain[..., l_param_name_out.index(weights_name)],
+                )
+                .quantile(0.5)
+                .values[0]
+            )
     elif method == "MAP":
         idx_lnprobability = chainI.param_names.index(lnprobability_name)
         logger.debug(f"idx_lnprobability: {idx_lnprobability}")
@@ -1376,32 +1763,64 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         #     logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
         # walker, it = unravel_index(argmax(lnprobability), shape=lnprobability.shape)
         # res = array([chainI[walker, it, dim] for dim in range(ndim)])
-        clean_flat_chains = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes,
-                                                force_finite=force_finite)
+        clean_flat_chains = get_clean_flatchain(
+            chainI,
+            l_walker=l_walker,
+            l_burnin=l_burnin,
+            iterations_indexes=iterations_indexes,
+            force_finite=force_finite,
+        )
         if weights_name is None:
             i_MAP_flatchain = argmax(clean_flat_chains[..., idx_lnprobability])
         else:
             idx_weights = chainI.param_names.index(weights_name)
             logger.debug(f"idx_weights: {idx_weights}")
-            i_MAP_flatchain = argmax(clean_flat_chains[..., idx_lnprobability] * clean_flat_chains[..., idx_weights])
+            i_MAP_flatchain = argmax(
+                clean_flat_chains[..., idx_lnprobability] * clean_flat_chains[..., idx_weights]
+            )
         logger.debug(f"i_MAP_flatchain: {i_MAP_flatchain}")
         res = clean_flat_chains[i_MAP_flatchain]
     elif method == "gaussfit":
-        res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes, force_finite=force_finite), nbins=100)
+        res = gauspeak(
+            get_clean_flatchain(
+                chainI,
+                l_walker=l_walker,
+                l_burnin=l_burnin,
+                iterations_indexes=iterations_indexes,
+                force_finite=force_finite,
+            ),
+            nbins=100,
+        )
     elif method == "mode":
-        res = modepeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes, force_finite=force_finite), nbins=100)
+        res = modepeak(
+            get_clean_flatchain(
+                chainI,
+                l_walker=l_walker,
+                l_burnin=l_burnin,
+                iterations_indexes=iterations_indexes,
+                force_finite=force_finite,
+            ),
+            nbins=100,
+        )
     else:
-        raise ValueError("Method {} is not recognised".format(method))
+        raise ValueError(f"Method {method} is not recognised")
     if verbose == 1:
         l_param_names = __get_default_l_param_name(l_param_name_out, len(l_param_name_out))
         text = "\n"
         for i, param_name in enumerate(l_param_names):
-            text += "{} = {}\n".format(param_name, res[i])
+            text += f"{param_name} = {res[i]}\n"
         logger.info(text)
     return res, l_param_name_out
 
 
-def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, iterations_indexes=None, force_finite=True):
+def get_clean_flatchain(
+    chainI,
+    l_walker=None,
+    l_burnin=None,
+    l_param_idx=None,
+    iterations_indexes=None,
+    force_finite=True,
+):
     """Return a flatchain with only the selected walkers and iteration after the burnin.
 
     Arguments
@@ -1441,8 +1860,10 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, 
         elif l_walker is None:
             l_walker = __get_default_l_walker(nwalker=chainI.shape[0])
             if len(l_walker) != len(l_burnin):
-                raise ValueError("If you provide l_burnin but not l_walker, it is assumed that "
-                                 "l_walker is all available walkers, but dimensions do not match.")
+                raise ValueError(
+                    "If you provide l_burnin but not l_walker, it is assumed that "
+                    "l_walker is all available walkers, but dimensions do not match."
+                )
         # If res is None then at this point we have a l_burnin and a l_walker
         if res is None:
             ndim = chainI.dim
@@ -1456,16 +1877,25 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, 
             else:
                 for dim in range(ndim):
                     if l_param_idx is not None:
-                        if not(dim in l_param_idx):
+                        if dim not in l_param_idx:
                             continue
-                    res.append(np.concatenate([chainI[walker, burnin:, dim] for walker, burnin in zip(l_walker, l_burnin)]))
+                    res.append(
+                        np.concatenate(
+                            [
+                                chainI[walker, burnin:, dim]
+                                for walker, burnin in zip(l_walker, l_burnin)
+                            ]
+                        )
+                    )
                 res = array(res).transpose()
         else:
             if l_param_idx is not None:
                 res = res[:, l_param_idx]
     else:
         res = np.ones((len(iterations_indexes["indexes_walker"]), chainI.shape[-1])) * np.nan
-        for i_iter, (i_walker, i_iter_walker) in enumerate(zip(iterations_indexes["indexes_walker"], iterations_indexes["indexes_iter_walker"])):
+        for i_iter, (i_walker, i_iter_walker) in enumerate(
+            zip(iterations_indexes["indexes_walker"], iterations_indexes["indexes_iter_walker"])
+        ):
             res[i_iter, :] = chainI[i_walker, i_iter_walker, :]
         if l_param_idx is not None:
             res = res[:, l_param_idx]
@@ -1488,8 +1918,9 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     :param int intervals: Number of sub-chains to analyze. Defaults to 20.
     :param int_iterable l_walker: list of valid walkers
     """
-    logger.info("Geweke z score computation parameters: first = {first}, last = {last}, intervals = {intervals}"
-                "".format(first=first, last=last, intervals=intervals))
+    logger.info(
+        f"Geweke z score computation parameters: first = {first}, last = {last}, intervals = {intervals}"
+    )
     nwalker = chains.shape[0]
     ndim = chains.shape[-1]
     # Get the list of valid walkers (l_walker), the number of parameters (ndim) and the number of
@@ -1502,35 +1933,50 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     # part of the chain for each parameter
     nb_step_last = int(nsteps * last)
     last_start_step = nsteps - nb_step_last
-    logger.info("Number of steps in last portion of the chains for geweke convergence estimate: {}".format(nb_step_last))
+    logger.info(
+        f"Number of steps in last portion of the chains for geweke convergence estimate: {nb_step_last}"
+    )
     l_med_last = [median(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
-    logger.info("Median value for each parameter (over all specified walkers) in the last portion of"
-                " the chains: {}".format(l_med_last))
-    l_mad_last = [mad(chains[l_walker, last_start_step:, dim], axis=None, nan_policy="omit") for dim in range(ndim)]
+    logger.info(
+        "Median value for each parameter (over all specified walkers) in the last portion of"
+        f" the chains: {l_med_last}"
+    )
+    l_mad_last = [
+        mad(chains[l_walker, last_start_step:, dim], axis=None, nan_policy="omit")
+        for dim in range(ndim)
+    ]
     l_mad_last_is0 = [mad_dim == 0.0 for mad_dim in l_mad_last]
     if any(l_mad_last_is0):
         for dim in np.where(l_mad_last_is0)[0]:
-            logger.debug("MAD returned 0.0 for parameter number: {}. Compute std.".format(dim))
+            logger.debug(f"MAD returned 0.0 for parameter number: {dim}. Compute std.")
             l_mad_last[dim] = std(chains[l_walker, last_start_step:, dim])
             if l_mad_last[dim] == 0.0:
-                raise ValueError("MAD and std returned zero for parameter number: {}.".format(dim))
-    logger.info("MAD value for each parameter (over all specified walkers) in the last portion of"
-                " the chains: {}".format(l_mad_last))
+                raise ValueError(f"MAD and std returned zero for parameter number: {dim}.")
+    logger.info(
+        "MAD value for each parameter (over all specified walkers) in the last portion of"
+        f" the chains: {l_mad_last}"
+    )
 
     # Compute the start steps of all the first parts of the chains that we will use for the Geweke
     # diagnostic (first_start_steps) and length of those first part (first_length).
     first_length = int(nsteps * first)
-    logger.info("Number of steps in each interval of first portion of the chains: {}".format(first_length))
+    logger.info(f"Number of steps in each interval of first portion of the chains: {first_length}")
     first_start_steps = [int(i * (last_start_step / intervals)) for i in range(intervals)]
-    logger.debug("First step of each interval in the first portion of the chains: {}".format(first_start_steps))
+    logger.debug(
+        f"First step of each interval in the first portion of the chains: {first_start_steps}"
+    )
 
     # Then for each parameter and for each walker and for each first part compute the Geweke z-score
     zscores = ones((nwalker, intervals, ndim)) * nan
     for dim, med_last, mad_last in zip(range(ndim), l_med_last, l_mad_last):
         for i, walker in enumerate(l_walker):
             for j, first_start in enumerate(first_start_steps):
-                med_first = median(chains[walker, first_start:(first_start + first_length), dim])
-                mad_first = mad(chains[walker, first_start:(first_start + first_length), dim], axis=None, nan_policy="omit")
+                med_first = median(chains[walker, first_start : (first_start + first_length), dim])
+                mad_first = mad(
+                    chains[walker, first_start : (first_start + first_length), dim],
+                    axis=None,
+                    nan_policy="omit",
+                )
                 # Compute the zscore, but if the dispersion of the first part is too big compared to
                 # the last part, I don't consider the first part as converge what the zscore.
                 if mad_first < (5 * mad_last):
@@ -1540,14 +1986,28 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     return zscores, first_start_steps
 
 
-def geweke_plot(zscores, first_steps=None, l_param_name=None, geweke_thres=2,
-                plot_height=1.5, plot_width=6, ncols=2, **kwargs_tl):
+def geweke_plot(
+    zscores,
+    first_steps=None,
+    l_param_name=None,
+    geweke_thres=2,
+    plot_height=1.5,
+    plot_width=6,
+    ncols=2,
+    **kwargs_tl,
+):
     ndim = zscores.shape[-1]
     nwalker = zscores.shape[0]
-    nrows = ndim // ncols 
+    nrows = ndim // ncols
     if (ndim % ncols) > 0:
         nrows += 1
-    fig, ax = subplots(ncols=ncols, nrows=nrows, sharex=True, squeeze=True, figsize=(ncols * plot_width, nrows * plot_height))
+    fig, ax = subplots(
+        ncols=ncols,
+        nrows=nrows,
+        sharex=True,
+        squeeze=True,
+        figsize=(ncols * plot_width, nrows * plot_height),
+    )
     l_param_name = __get_default_l_param_name(l_param_name=l_param_name, ndim=ndim)
     first_steps = __get_default_first_steps(first_steps=first_steps, intervals=zscores.shape[1])
     xmin = min(first_steps)
@@ -1563,13 +2023,13 @@ def geweke_plot(zscores, first_steps=None, l_param_name=None, geweke_thres=2,
     fig.tight_layout(**kwargs_tl)
 
 
-def geweke_selection(zscores, first_steps=None, geweke_thres=2., l_walker=None, verbose=1):
+def geweke_selection(zscores, first_steps=None, geweke_thres=2.0, l_walker=None, verbose=1):
     """Compute the burnin for each valid walker based on their zscores.
 
     :param numpy.ndarray zscores:
     :param int_iteratable l_walker: list of valid walkers
     """
-    logger.info("Geweke selection parameters: geweke_threshold = {geweke_thres}".format(geweke_thres=geweke_thres))
+    logger.info(f"Geweke selection parameters: geweke_threshold = {geweke_thres}")
     res = abs(zscores) <= geweke_thres
     nwalker = zscores.shape[0]
     intervals = zscores.shape[1]
@@ -1584,9 +2044,10 @@ def geweke_selection(zscores, first_steps=None, geweke_thres=2., l_walker=None, 
                 l_walker_new.append(l_walker[i])
                 break
     if verbose == 1:
-        logger.info("List of burnin for valid walker: {}".format(dict(zip(l_walker, l_burnin))))
-        logger.info("Number of walkers invalid walkers found: {}/{}"
-                    "".format(len(l_walker) - len(l_walker_new), len(l_walker)))
+        logger.info(f"List of burnin for valid walker: {dict(zip(l_walker, l_burnin))}")
+        logger.info(
+            f"Number of walkers invalid walkers found: {len(l_walker) - len(l_walker_new)}/{len(l_walker)}"
+        )
     return l_burnin, l_walker_new
 
 
@@ -1621,31 +2082,36 @@ def __get_default_ax(ax):
 def write_latex_table(filename, df_fitval, obj_name=None):
     """Write a TeX file with a table giving the fitted values."""
     if obj_name is None:
-        obj_name = ''
+        obj_name = ""
     # Create Latex table
     with open(filename, "w") as f:
         f.write("\\begin{table}\n\\caption{\\label{}}\n\\begin{tabular}{lc}\\hline\n")
-        f.write("Parameters & {}\\\\ \\hline\n".format(obj_name))
+        f.write(f"Parameters & {obj_name}\\\\ \\hline\n")
         for par in df_fitval.index:
-            f.write("{} & ${}_{{-{}}}^{{+{}}}$\\\\\n".format(par.replace('_', '\\_'),
-                                                             df_fitval.loc[par, 'value'],
-                                                             df_fitval.loc[par, 'sigma-'],
-                                                             df_fitval.loc[par, 'sigma+']))
+            f.write(
+                "{} & ${}_{{-{}}}^{{+{}}}$\\\\\n".format(
+                    par.replace("_", "\\_"),
+                    df_fitval.loc[par, "value"],
+                    df_fitval.loc[par, "sigma-"],
+                    df_fitval.loc[par, "sigma+"],
+                )
+            )
         f.write("\\hline\n\\\\")
         f.write("\\end{tabular}\n")
         f.write("\\end{table}\n")
 
 
-extension_pickle = {"chain": "_chain",
-                    "chain_sec_params": "_chain_secparams",
-                    "lnpost": "_lnprobability",
-                    "acceptfrac": "_acceptance_fraction",
-                    "l_param_name": "_l_param_name",
-                    "df_fittedval": "_df_fittedval",
-                    "fitted_values": "_fitted_values",
-                    "fitted_values_sec": "_fitted_values_sec",
-                    "l_walkersNburnin": "_walkers_burnin"
-                    }
+extension_pickle = {
+    "chain": "_chain",
+    "chain_sec_params": "_chain_secparams",
+    "lnpost": "_lnprobability",
+    "acceptfrac": "_acceptance_fraction",
+    "l_param_name": "_l_param_name",
+    "df_fittedval": "_df_fittedval",
+    "fitted_values": "_fitted_values",
+    "fitted_values_sec": "_fitted_values_sec",
+    "l_walkersNburnin": "_walkers_burnin",
+}
 
 
 def pickle_stuff(stuff, filename):
@@ -1662,7 +2128,9 @@ def pickle_stuff(stuff, filename):
         dump(stuff, fpickle)
 
 
-def save_emceesampler(sampler, l_param_name=None, obj_name="", extension_exploration="", folder=None):
+def save_emceesampler(
+    sampler, l_param_name=None, obj_name="", extension_exploration="", folder=None
+):
     """Save Emcee EnsembleSampler instance elements into pickle files.
 
     :param emcee.EnsembleSampler sampler: EnsembleSampler instance to save
@@ -1681,25 +2149,59 @@ def save_emceesampler(sampler, l_param_name=None, obj_name="", extension_explora
     nwalker, nstep, ndim = sampler.chain.shape
     if (sampler.chain.size * sampler.chain.itemsize) > 4e9:  # 4GB
         nstep = int(np.floor(4e9 / sampler.chain.itemsize / ndim / nwalker))
-    pickle_stuff(sampler.chain[:, -nstep:, :], join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)))
+    pickle_stuff(
+        sampler.chain[:, -nstep:, :],
+        join(
+            folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)
+        ),
+    )
 
     # Save lnprobability in a pickle
-    pickle_stuff(sampler.lnprobability[:, -nstep:], join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["lnpost"], extension_exploration)))
+    pickle_stuff(
+        sampler.lnprobability[:, -nstep:],
+        join(
+            folder, "{}{}{}.pk".format(obj_name, extension_pickle["lnpost"], extension_exploration)
+        ),
+    )
 
     # Save acceptance_fraction in a pickle
-    pickle_stuff(sampler.acceptance_fraction, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["acceptfrac"], extension_exploration)))
+    pickle_stuff(
+        sampler.acceptance_fraction,
+        join(
+            folder,
+            "{}{}{}.pk".format(obj_name, extension_pickle["acceptfrac"], extension_exploration),
+        ),
+    )
 
     # Save l_param_name in a pickle
     if l_param_name is not None:
-        pickle_stuff(l_param_name, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["l_param_name"], extension_exploration)))
+        pickle_stuff(
+            l_param_name,
+            join(
+                folder,
+                "{}{}{}.pk".format(
+                    obj_name, extension_pickle["l_param_name"], extension_exploration
+                ),
+            ),
+        )
 
 
-def save_inference_data(inference_data, obj_name:str, extension_exploration:str, folder:str):
+def save_inference_data(inference_data, obj_name: str, extension_exploration: str, folder: str):
     """Save the inference data."""
-    pickle_stuff(inference_data, join(folder, "{}{}{}.pk".format(obj_name, "_inferencedata", extension_exploration)))
+    pickle_stuff(
+        inference_data,
+        join(folder, "{}{}{}.pk".format(obj_name, "_inferencedata", extension_exploration)),
+    )
 
 
-def save_chain_analysis(obj_name, extension_analysis="", fitted_values=None, fitted_values_sec=None, df_fittedval=None, folder=None):
+def save_chain_analysis(
+    obj_name,
+    extension_analysis="",
+    fitted_values=None,
+    fitted_values_sec=None,
+    df_fittedval=None,
+    folder=None,
+):
     """Save chain analysis results.
 
     :param str obj_name: Name of the object for which you want to load the chain analysis results.
@@ -1717,27 +2219,51 @@ def save_chain_analysis(obj_name, extension_analysis="", fitted_values=None, fit
 
     # Save df_fittedval in a pickle
     if df_fittedval is not None:
-        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["df_fittedval"], extension_analysis)), "wb") as fdffitval:
+        with open(
+            join(
+                folder,
+                "{}{}{}.pk".format(obj_name, extension_pickle["df_fittedval"], extension_analysis),
+            ),
+            "wb",
+        ) as fdffitval:
             dump(df_fittedval, fdffitval)
 
     # Save fitted_values in a pickle
     if fitted_values is not None:
         if "array" not in fitted_values or "l_param" not in fitted_values:
-            raise ValueError("fitted_values should be a dictionary with 2 keys 'array' and "
-                             "'l_param'")
-        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values"], extension_analysis)), "wb") as ffitval:
+            raise ValueError(
+                "fitted_values should be a dictionary with 2 keys 'array' and 'l_param'"
+            )
+        with open(
+            join(
+                folder,
+                "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values"], extension_analysis),
+            ),
+            "wb",
+        ) as ffitval:
             dump(fitted_values, ffitval)
 
     # Save fitted_values in a pickle
     if fitted_values_sec is not None:
         if "array" not in fitted_values or "l_param" not in fitted_values:
-            raise ValueError("fitted_values should be a dictionary with 2 keys 'array' and "
-                             "'l_param'")
-        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values_sec"], extension_analysis)), "wb") as ffitvals:
+            raise ValueError(
+                "fitted_values should be a dictionary with 2 keys 'array' and 'l_param'"
+            )
+        with open(
+            join(
+                folder,
+                "{}{}{}.pk".format(
+                    obj_name, extension_pickle["fitted_values_sec"], extension_analysis
+                ),
+            ),
+            "wb",
+        ) as ffitvals:
             dump(fitted_values_sec, ffitvals)
 
 
-def save_walkers_and_burnin(obj_name, extension_analysis="", l_walker=None, l_burnin=None, folder=None):
+def save_walkers_and_burnin(
+    obj_name, extension_analysis="", l_walker=None, l_burnin=None, folder=None
+):
     """Save list of selected walkers and associated burnin results.
 
     Arguments
@@ -1760,11 +2286,19 @@ def save_walkers_and_burnin(obj_name, extension_analysis="", l_walker=None, l_bu
     # Save df_fittedval in a pickle
     if (l_walker is not None) and (l_burnin is not None):
         dico = {}
-        if (l_walker is not None):
+        if l_walker is not None:
             dico["l_walker"] = l_walker
-        if (l_burnin is not None):
+        if l_burnin is not None:
             dico["l_burnin"] = l_burnin
-        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["l_walkersNburnin"], extension_analysis)), "wb") as fsave:
+        with open(
+            join(
+                folder,
+                "{}{}{}.pk".format(
+                    obj_name, extension_pickle["l_walkersNburnin"], extension_analysis
+                ),
+            ),
+            "wb",
+        ) as fsave:
             dump(dico, fsave)
     else:
         raise ValueError("There is nothing to save you did not provide l_walker or l_burnin")
@@ -1786,7 +2320,13 @@ def save_chains_secondary(obj_name, chainIsec, extension_analysis="", folder=Non
         makedirs(folder, exist_ok=True)
 
     # Save df_fittedval in a pickle
-    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain_sec_params"], extension_analysis)), "wb") as fchainsecpar:
+    with open(
+        join(
+            folder,
+            "{}{}{}.pk".format(obj_name, extension_pickle["chain_sec_params"], extension_analysis),
+        ),
+        "wb",
+    ) as fchainsecpar:
         dump(chainIsec, fchainsecpar)
 
 
@@ -1803,31 +2343,57 @@ def load_emceesampler(obj_name, extension_exploration="", folder="."):
         folder = getcwd()
 
     # Save chain in a pickle
-    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)), "rb") as fchain:
+    with open(
+        join(
+            folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)
+        ),
+        "rb",
+    ) as fchain:
         chain = load(fchain)
 
     # Save lnprobability in a pickle
-    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["lnpost"], extension_exploration)), "rb") as flnprob:
+    with open(
+        join(
+            folder, "{}{}{}.pk".format(obj_name, extension_pickle["lnpost"], extension_exploration)
+        ),
+        "rb",
+    ) as flnprob:
         lnprobability = load(flnprob)
 
     # Save acceptance_fraction in a pickle
-    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["acceptfrac"], extension_exploration)), "rb") as faccfrac:
+    with open(
+        join(
+            folder,
+            "{}{}{}.pk".format(obj_name, extension_pickle["acceptfrac"], extension_exploration),
+        ),
+        "rb",
+    ) as faccfrac:
         acceptance_fraction = load(faccfrac)
 
     # Save l_param_name in a pickle
-    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["l_param_name"], extension_exploration)), "rb") as flparam:
+    with open(
+        join(
+            folder,
+            "{}{}{}.pk".format(obj_name, extension_pickle["l_param_name"], extension_exploration),
+        ),
+        "rb",
+    ) as flparam:
         l_param_name = load(flparam)
 
     return chain, lnprobability, acceptance_fraction, l_param_name
 
 
-def load_inference_data(obj_name:str, extension_exploration:str, folder:str):
+def load_inference_data(obj_name: str, extension_exploration: str, folder: str):
     # Save chain in a pickle
-    with open(join(folder, "{}{}{}.pk".format(obj_name, "_inferencedata", extension_exploration)), "rb") as finfdata:
+    with open(
+        join(folder, "{}{}{}.pk".format(obj_name, "_inferencedata", extension_exploration)), "rb"
+    ) as finfdata:
         return load(finfdata)
 
 
-def load_chain_analysis(obj_name, extension_analysis="", folder=None, kwargs_load=None, error_ok=False):
+def load_chain_analysis(
+    obj_name, extension_analysis="", folder=None, kwargs_load=None, error_ok=False
+):
     """load Emcee sampler elements.
 
     :param str obj_name: Name of the object for which you want to load the chain analysis results.
@@ -1843,8 +2409,10 @@ def load_chain_analysis(obj_name, extension_analysis="", folder=None, kwargs_loa
         folder = getcwd()
 
     # load df_fittedval from a pickle
-    file_df_fittedval = "{}{}{}.pk".format(obj_name, extension_pickle["df_fittedval"], extension_analysis)
-    
+    file_df_fittedval = "{}{}{}.pk".format(
+        obj_name, extension_pickle["df_fittedval"], extension_analysis
+    )
+
     if isfile(join(folder, file_df_fittedval)):
         with open(join(folder, file_df_fittedval), "rb") as fdffitval:
             if kwargs_load is None:
@@ -1853,7 +2421,9 @@ def load_chain_analysis(obj_name, extension_analysis="", folder=None, kwargs_loa
                 try:
                     df_fittedval = load(fdffitval, **kwargs_load)
                 except:
-                    logger.error("An error occured when attempting to load df_fittedval from the pickle file.")
+                    logger.error(
+                        "An error occured when attempting to load df_fittedval from the pickle file."
+                    )
                     df_fittedval = None
             else:
                 df_fittedval = load(fdffitval, **kwargs_load)
@@ -1861,7 +2431,9 @@ def load_chain_analysis(obj_name, extension_analysis="", folder=None, kwargs_loa
         df_fittedval = None
 
     # Load fitted_values from a pickle
-    file_fitted_values = "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values"], extension_analysis)
+    file_fitted_values = "{}{}{}.pk".format(
+        obj_name, extension_pickle["fitted_values"], extension_analysis
+    )
     if isfile(join(folder, file_fitted_values)):
         with open(join(folder, file_fitted_values), "rb") as ffitval:
             fitted_values = load(ffitval)
@@ -1869,7 +2441,9 @@ def load_chain_analysis(obj_name, extension_analysis="", folder=None, kwargs_loa
         fitted_values = None
 
     # Load fitted_values_sec from a pickle
-    file_fitted_values_sec = "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values_sec"], extension_analysis)
+    file_fitted_values_sec = "{}{}{}.pk".format(
+        obj_name, extension_pickle["fitted_values_sec"], extension_analysis
+    )
     if isfile(join(folder, file_fitted_values_sec)):
         with open(join(folder, file_fitted_values_sec), "rb") as ffitvals:
             fitted_values_sec = load(ffitvals)
@@ -1902,7 +2476,9 @@ def load_walkers_and_burnin(obj_name, extension_analysis="", folder=None):
         folder = getcwd()
 
     # load df_fittedval from a pickle
-    file_l_walkersNburnin = "{}{}{}.pk".format(obj_name, extension_pickle["l_walkersNburnin"], extension_analysis)
+    file_l_walkersNburnin = "{}{}{}.pk".format(
+        obj_name, extension_pickle["l_walkersNburnin"], extension_analysis
+    )
     if isfile(join(folder, file_l_walkersNburnin)):
         with open(join(folder, file_l_walkersNburnin), "rb") as fsave:
             dico = load(fsave)
@@ -1926,7 +2502,9 @@ def load_chains_secondary(obj_name, extension_analysis="", folder=None):
         folder = getcwd()
 
     # load df_fittedval from a pickle
-    file_chainsecpars = "{}{}{}.pk".format(obj_name, extension_pickle["chain_sec_params"], extension_analysis)
+    file_chainsecpars = "{}{}{}.pk".format(
+        obj_name, extension_pickle["chain_sec_params"], extension_analysis
+    )
     if isfile(join(folder, file_chainsecpars)):
         with open(join(folder, file_chainsecpars), "rb") as fchainsecpar:
             chainIsec = load(fchainsecpar)
@@ -1937,31 +2515,29 @@ def load_chains_secondary(obj_name, extension_analysis="", folder=None):
 
 
 def get_param_value_OrderedDict(values, l_param_name):
-    """Return an Orderedict with associate the parameter name to its value.
-    """
+    """Return an Orderedict with associate the parameter name to its value."""
     res = OrderedDict()
     for val, name in zip(values, l_param_name):
         res[name] = val
     return res
 
+
 def get_param_value_df(values, l_param_name):
-    """Return an Orderedict with associate the parameter name to its value.
-    """
+    """Return an Orderedict with associate the parameter name to its value."""
     return DataFrame({"value": values}, index=l_param_name)
 
 
 def get_param_vector(df_val, l_param_name):
-    """
-    """
+    """ """
     p = []
     for param_name in l_param_name:
         p.append(df_val.loc[param_name, "value"])
     return np.array(p)
 
+
 def get_param_vector_from_print(param_vector_str):
-    """
-    """
-    res = re.split(';|,| ', param_vector_str)
+    """ """
+    res = re.split(";|,| ", param_vector_str)
     return np.array([float(val.strip("[]")) for val in res if val.strip("[]") != ""])
 
 
@@ -2025,11 +2601,16 @@ def indicate_y_outliers(x, y, ax, color=None, masksncolors=None, **kwargs):
                 if plot:
                     color2use = mnc.get("color", None)
                 break
-        if not(found_in_mask):
+        if not (found_in_mask):
             color2use = color
-        ax.annotate('', xy=(x[ii], ylim[0]), xycoords='data',
-                    xytext=(0, 10), textcoords='offset points',
-                    arrowprops=dict(arrowstyle="-|>", color=color2use, **kwargs))
+        ax.annotate(
+            "",
+            xy=(x[ii], ylim[0]),
+            xycoords="data",
+            xytext=(0, 10),
+            textcoords="offset points",
+            arrowprops=dict(arrowstyle="-|>", color=color2use, **kwargs),
+        )
     for ii in np.where(y > ylim[1])[0]:
         found_in_mask = False
         plot = True
@@ -2040,14 +2621,27 @@ def indicate_y_outliers(x, y, ax, color=None, masksncolors=None, **kwargs):
                 if plot:
                     color2use = mnc.get("color", None)
                 break
-        if not(found_in_mask):
+        if not (found_in_mask):
             color2use = color
-        ax.annotate('', xy=(x[ii], ylim[1]), xycoords='data',
-                    xytext=(0, -10), textcoords='offset points',
-                    arrowprops=dict(arrowstyle="-|>", color=color2use, **kwargs))
+        ax.annotate(
+            "",
+            xy=(x[ii], ylim[1]),
+            xycoords="data",
+            xytext=(0, -10),
+            textcoords="offset points",
+            arrowprops=dict(arrowstyle="-|>", color=color2use, **kwargs),
+        )
 
 
-def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, sampling=None, iterations_indexes=None, kwargs_corner=None):
+def corner(
+    chaininterpret,
+    l_param_name,
+    l_walker=None,
+    l_burnin=None,
+    sampling=None,
+    iterations_indexes=None,
+    kwargs_corner=None,
+):
     """Make a corner plot with only the parameters specified.
 
     Arguments
@@ -2072,10 +2666,20 @@ def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, sampling=
     """
     kwargs_corner = {} if kwargs_corner is None else kwargs_corner
     if (l_walker is not None) or (l_burnin is not None):
-        clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes)
+        clean_flat_chains = get_clean_flatchain(
+            chaininterpret[..., l_param_name],
+            l_walker=l_walker,
+            l_burnin=l_burnin,
+            iterations_indexes=iterations_indexes,
+        )
     else:
         if len(chaininterpret.shape) > 2:
-            clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes)
+            clean_flat_chains = get_clean_flatchain(
+                chaininterpret[..., l_param_name],
+                l_walker=l_walker,
+                l_burnin=l_burnin,
+                iterations_indexes=iterations_indexes,
+            )
         else:
             clean_flat_chains = chaininterpret[..., l_param_name]
     kwargs_corner_copy = kwargs_corner.copy()
@@ -2088,7 +2692,15 @@ def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, sampling=
         corner_dfm(clean_flat_chains[::sampling], labels=labels, **kwargs_corner_copy)
 
 
-def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_burnin=None, only_bestfit_bic=False, datasim_kwargs={}):
+def compute_bic(
+    post_instance,
+    df_fittedval,
+    chaininterpret,
+    l_walker=None,
+    l_burnin=None,
+    only_bestfit_bic=False,
+    datasim_kwargs={},
+):
     """Compute the Bayesian Information Criteria.
 
     Arguments
@@ -2129,7 +2741,9 @@ def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_bu
     logger.info(f"Number of data points : {nb_data_points}")
 
     if not only_bestfit_bic:
-        clean_flat_chains = get_clean_flatchain(chaininterpret, l_walker=l_walker, l_burnin=l_burnin)
+        clean_flat_chains = get_clean_flatchain(
+            chaininterpret, l_walker=l_walker, l_burnin=l_burnin
+        )
         lnlikeproba = []
 
         for i_iter in tqdm(range(clean_flat_chains.shape[0])):
@@ -2153,7 +2767,9 @@ def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_bu
     return bic, bic_bestfit
 
 
-def plot_marginalized_distrib(chaininterpret, l_param_name, l_walker=None, l_burnin=None, kwargs_hist=None):
+def plot_marginalized_distrib(
+    chaininterpret, l_param_name, l_walker=None, l_burnin=None, kwargs_hist=None
+):
     """
     Make a corner plot with only the parameters specified.
 
@@ -2172,10 +2788,14 @@ def plot_marginalized_distrib(chaininterpret, l_param_name, l_walker=None, l_bur
     """
     kwargs_hist = {} if kwargs_hist is None else kwargs_hist
     if (l_walker is not None) or (l_burnin is not None):
-        clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+        clean_flat_chains = get_clean_flatchain(
+            chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin
+        )
     else:
         if len(chaininterpret.shape) > 2:
-            clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+            clean_flat_chains = get_clean_flatchain(
+                chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin
+            )
         else:
             clean_flat_chains = chaininterpret[..., l_param_name]
     fig, ax = subplots(ncols=len(l_param_name), constrained_layout=True)
@@ -2185,34 +2805,46 @@ def plot_marginalized_distrib(chaininterpret, l_param_name, l_walker=None, l_bur
         ax[ii].set_title(param)
 
 
-def compute_limits(chainInterp, l_walker, l_burnin, l_param_name, l_confidence_level=[68, 95, 99.7]):
+def compute_limits(
+    chainInterp, l_walker, l_burnin, l_param_name, l_confidence_level=[68, 95, 99.7]
+):
     l_col_name = [f"{conf_ii}%" for conf_ii in l_confidence_level]
     l_col_name_exact = [f"{conf_ii}% (exact)" for conf_ii in l_confidence_level]
     l_low_qs = [100 - conf_i for conf_i in l_confidence_level]
     l_all_qs = list(set(l_low_qs + l_confidence_level + [16, 84]))
     qs_index = dict(zip(l_all_qs, range(len(l_all_qs))))
     l_param_idx = [chainInterp.paramname_idx[param_name] for param_name in l_param_name]
-    chain_clean_param = get_clean_flatchain(chainInterp, l_walker=l_walker, l_burnin=l_burnin, l_param_idx=l_param_idx, iterations_indexes=None, force_finite=True)
+    chain_clean_param = get_clean_flatchain(
+        chainInterp,
+        l_walker=l_walker,
+        l_burnin=l_burnin,
+        l_param_idx=l_param_idx,
+        iterations_indexes=None,
+        force_finite=True,
+    )
     column_names = l_col_name + l_col_name_exact
     d_upper = {col_name_i: [] for col_name_i in column_names}
     d_lower = {col_name_i: [] for col_name_i in column_names}
     for i_param, param_name in enumerate(l_param_name):
         qs = np.nanpercentile(chain_clean_param[:, i_param], l_all_qs)
         sigma = qs[qs_index[84]] - qs[qs_index[16]]
-        for l_qs, dd in zip([l_confidence_level, l_low_qs], [d_upper, d_lower]): 
+        for l_qs, dd in zip([l_confidence_level, l_low_qs], [d_upper, d_lower]):
             vals = [qs[qs_index[qq]] for qq in l_qs]
             uvals = [ufloat(val_i, sigma) for val_i in vals]
             vals_str = []
             for i_qs, uval_i in enumerate(uvals):
                 dd[l_col_name_exact[i_qs]].append(vals[i_qs])
                 val_str_i = uval_i.__str__()
-                if val_str_i.startswith('('):
-                    exoponent = val_str_i.split(')')[-1]
-                    vv = val_str_i.split('+/-')[0][1:]
+                if val_str_i.startswith("("):
+                    exoponent = val_str_i.split(")")[-1]
+                    vv = val_str_i.split("+/-")[0][1:]
                     dd[l_col_name[i_qs]].append(vv + exoponent)
                 else:
-                    dd[l_col_name[i_qs]].append(val_str_i.split('+/-')[0])
-    res = {uporlow: DataFrame(dd, index=l_param_name) for uporlow, dd in zip(["upper", "lower"], [d_upper, d_lower])}
+                    dd[l_col_name[i_qs]].append(val_str_i.split("+/-")[0])
+    res = {
+        uporlow: DataFrame(dd, index=l_param_name)
+        for uporlow, dd in zip(["upper", "lower"], [d_upper, d_lower])
+    }
     logger.info(f"Upper limits:\n{res['upper']}")
     logger.info(f"lower limits:\n{res['lower']}")
     return res
