@@ -1,0 +1,383 @@
+"""
+Script to produce pretty plots of LC time series
+
+@TODO:
+"""
+
+import json
+import os
+import random
+
+# import matplotlib
+from os import getcwd
+from os.path import join
+
+import dill
+import emcee
+import lisa.emcee_tools.emcee_tools as et
+import lisa.posterior.core.posterior as cpost
+import matplotlib.pyplot as pl
+from lisa.explore_analyze.lc_plots import create_LC_TS_plots
+from lisa.explore_analyze.misc import get_def_output_folders
+from lisa.explore_analyze.ts_plots import PlotsDefinition_TS
+from loguru import logger
+from pandas import DataFrame
+
+### for the A&A article class
+AandA_width = 3.543311946  # in inches = \hsize = 256.0748pt
+AandA_full_width = 7.2712643025  # in inches = \hsize = 523.53 pt
+
+default_figwidth = AandA_width
+default_figheight_factor = 0.75
+
+AandA_fontsize = 8
+
+# matplotlib.rcParams.update({
+#     "pgf.texsystem": "pdflatex",
+#     'font.family': 'serif',
+#     'text.usetex': True,
+#     'pgf.rcfonts': False})
+
+##########################
+# Parameters of the script
+##########################
+obj_name = "WASP-43"
+
+run_folder = getcwd()
+output_folders = get_def_output_folders(run_folder=run_folder)
+
+run_name = "burninrun"
+extension_analysis = f"_{run_name}"
+
+#########
+## logger
+if "sinkid_file_explore" in globals():
+    logger.remove(sinkid_file_explore)
+    del sinkid_file_explore
+if "sinkid_file_analyze" in globals():
+    logger.remove(sinkid_file_analyze)
+    del sinkid_file_analyze
+if "sinkid_file_plot" not in globals():
+    sinkid_file_plot = logger.add(
+        join(output_folders["log"], "plot.log"), level="DEBUG"
+    )
+
+################################
+## Load post_instance if required
+if "post_instance" not in globals():
+    logger.info("Loading post_instance from pickle")
+    # recreate post_instance object
+    post_instance = cpost.Posterior()
+    post_instance.configure_posterior(path_config_file="config_file.py")
+    post_instance.create_allfunctions()
+
+################################
+## Load df_fittedval if required
+if "df_fittedval" not in globals():
+    logger.info("Loading df_fittedval from pickle")
+    fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(
+        obj_name,
+        extension_analysis=extension_analysis,
+        folder=output_folders["pickles_analyze"],
+    )
+################################
+
+################################
+## Load emcee backend if required
+if "backend" not in globals():
+    backend_filename = f"{obj_name}_Emcee.h5"
+    backend_filepath = join(output_folders["pickles_explore"], backend_filename)
+    backend = emcee.backends.HDFBackend(backend_filepath, read_only=True, name=run_name)
+    nwalkers, nparams = backend.shape
+    print(
+        f"The chain stored in {backend_filename} has {nwalkers} walkers and {nparams} parameters."
+    )
+################################
+
+################################
+## Load thin and burnin if required
+if any([var not in globals() for var in ["thin", "burnin"]]):
+    # Open the file for reading
+    with open(
+        join(
+            output_folders["pickles_analyze"],
+            f"analysis_params{extension_analysis}.json",
+        ),
+        "r",
+    ) as json_file:
+        # Load the dictionary from the file
+        analysis_params = json.load(json_file)
+        thin = analysis_params["thin"]
+        burnin = analysis_params["burnin"]
+################################
+
+################################
+## Load parameter names if required
+if "l_param_name" not in globals():
+    with open(
+        join(output_folders["pickles_explore"], f"{obj_name}_param_names.json"), "r"
+    ) as file:
+        l_param_name = json.load(file)
+################################
+
+
+#####################################
+# Parameters of the script (continue)
+#####################################
+
+save_computedmodels_db = False
+load_computedmodels_db = False
+overwrite_computedmodels_db = False
+save_rms_values_LC = False
+overwrite_rms_values_LC = False
+save_plot = False
+
+kwargs_datasim: dict = {}  # Kwargs for the datasim functions
+npt_model = 50000
+extra_dt_model = None
+split_GP_computation = 500
+
+fontsize = AandA_fontsize
+
+time_fact = None  # None, 24.
+time_unit = "BJD - 2.457.000"
+
+LC_fact = 1e6
+LC_unit = "ppm"
+
+nb_rows = 1
+nb_cols = 1
+
+
+bin = 98.7 / 3  # CHEOPS orbit in min
+instrument = "CHEOPS"
+has_contam = True  # If the contamination is fixed to zero, you should remove contam from the expression
+has_decorrelation_likelihood = True  # If the decorrelation likelihood is fixed to zero, you should remove decorrelation_likelihood from the expression
+
+plotdef_TS = PlotsDefinition_TS(nb_rows=nb_rows, nb_cols=nb_cols)
+
+# This is an example of how to fill plotdef_TS and specify what you want to plot
+# Modify it to your needs
+
+from config_file import l_idxdst_all
+
+nb_random = 10
+l_df_param_value = []
+chains = backend.get_chain(flat=True, thin=thin, discard=burnin)
+for i in range(nb_random):
+    random_iteration = random.randint(a=0, b=chains.shape[0] - 1)
+    l_df_param_value.append(
+        DataFrame({"value": chains[random_iteration, :]}, index=l_param_name)
+    )
+del chains
+
+props = dict(boxstyle="round", facecolor="white", alpha=0.5)
+
+for nb_dst in l_idxdst_all:
+    i_row = nb_dst // nb_cols
+    i_col = nb_dst % nb_cols
+    expression_data = "data"
+    expression_model = "model"
+    if has_contam:
+        expression_data += " / contam"
+        expression_model += " / contam"
+    if has_decorrelation_likelihood:
+        expression_data += " - decorrelation_likelihood"
+    expression_data += " - 1"
+    expression_model += " - 1"
+    plotdef_TS.add_modelordata_to_grid(
+        name=f"data_{nb_dst}",
+        expression=expression_data,
+        datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}",
+        pl_kwargs={"color": "k", "alpha": 0.1, "fmt": ".", "show_error": False},
+        time_factor=time_fact,
+        value_factor=LC_fact,
+        i_row=i_row,
+        i_col=i_col,
+    )
+    plotdef_TS.add_modelordata_to_grid(
+        name=f"data_{nb_dst}_bin",
+        expression=expression_data,
+        datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}",
+        exptime=bin / 60 / 24,
+        pl_kwargs={
+            "color": "k",
+            "alpha": 1,
+            "fmt": "o",
+            "show_error": True,
+            "label": f"bin: {bin:.1f}min",
+        },
+        time_factor=time_fact,
+        value_factor=LC_fact,
+        i_row=i_row,
+        i_col=i_col,
+    )
+    plotdef_TS.add_modelordata_to_grid(
+        name=f"instvar{nb_dst}",
+        expression="inst_var",
+        datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}",
+        time_limits=None,
+        pl_kwargs={"color": "g", "label": None},
+        time_factor=time_fact,
+        value_factor=LC_fact,
+        i_row=i_row,
+        i_col=i_col,
+    )
+    for jj, df_param_value_j in enumerate(l_df_param_value):
+        plotdef_TS.add_modelordata_to_grid(
+            name=f"instvar{nb_dst}_rand{jj}",
+            expression="inst_var",
+            datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}",
+            time_limits=None,
+            df_param_value=df_param_value_j,
+            pl_kwargs={"color": "g", "label": None, "alpha": 0.2},
+            time_factor=time_fact,
+            value_factor=LC_fact,
+            i_row=i_row,
+            i_col=i_col,
+        )
+    plotdef_TS.add_modelordata_to_grid(
+        name=f"model_row{i_row}col{i_col}",
+        expression=expression_model,
+        datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}",
+        time_limits=None,
+        pl_kwargs={"color": "r", "label": "planet model"},
+        time_factor=time_fact,
+        value_factor=LC_fact,
+        i_row=i_row,
+        i_col=i_col,
+    )
+    for jj, df_param_value_j in enumerate(l_df_param_value):
+        plotdef_TS.add_modelordata_to_grid(
+            name=f"model_row{i_row}col{i_col}_rand{jj}",
+            expression=expression_model,
+            datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}",
+            time_limits=None,
+            df_param_value=df_param_value_j,
+            pl_kwargs={"color": "r", "label": None, "alpha": 0.2},
+            time_factor=time_fact,
+            value_factor=LC_fact,
+            i_row=i_row,
+            i_col=i_col,
+        )
+    plotdef_TS.things2plot[f"model_row{i_row}col{i_col}"].pl_kwargs["label"] = "Model"
+    plotdef_TS.things2plot[f"instvar{nb_dst}"].pl_kwargs["label"] = "Inst Var"
+    plotdef_TS.things2plot[f"data_{nb_dst}"].pl_kwargs["label"] = instrument
+    axes_properties_ii = plotdef_TS.get_axes_properties(i_row=i_row, i_col=i_col)
+    axes_properties_ii.text_kwargs.append(
+        {
+            "x": 0.95,
+            "y": 0.95,
+            "s": f"dst={nb_dst}",
+            "bbox": props,
+            "ha": "right",
+            "va": "top",
+        }
+    )
+    if i_col != 0:
+        axes_properties_ii.ydata.show_label = False
+        # axes_properties_ii.ydata.show_ticklabels = False
+        axes_properties_ii.yresi.show_label = False
+        axes_properties_ii.yresi.show_ticklabels = False
+    if i_row != (nb_rows - 1):
+        axes_properties_ii.x.show_label = False
+
+plotdef_TS.set_df_param_value(df_param_value=df_fittedval)
+
+plotdef_TS.set_axes_property(value=False, property="do_legend")
+plotdef_TS.set_axes_property(value=True, property="do_legend", i_row=0, i_col=0)
+plotdef_TS.set_axis_property(value="Time", property="name", axis="x")
+plotdef_TS.set_axis_property(value=time_unit, property="unit", axis="x")
+plotdef_TS.set_axis_property(value="$\Delta$F / F", property="name", axis="ydata")
+plotdef_TS.set_axis_property(value=LC_unit, property="unit", axis="ydata")
+plotdef_TS.set_axis_property(value="O-C", property="name", axis="yresi")
+plotdef_TS.set_axis_property(value=LC_unit, property="unit", axis="yresi")
+
+plotdef_TS.set_axis_property(value=(-500, 500), property="lims", axis="yresi")
+
+# show_title_TS = True
+# indicate_y_outliers = {"data": False, "resi": False}
+# legend_kwargs_TS = {"all": {"do": True}}
+# pad_TS = None
+
+#########################
+# Execution of the script
+#########################
+
+file_path_computedmodels_db = os.path.join(
+    output_folders["pickles_analyze"],
+    f"{obj_name}_computedmodels_db{extension_analysis}.pk",
+)
+if "computedmodels_db" not in globals():
+    loaded_computedmodels_db = False
+    if load_computedmodels_db:
+        logger.info("Attempting to Load computedmodels_db from pickle")
+        if os.path.isfile(file_path_computedmodels_db):
+            with open(file_path_computedmodels_db, "rb") as ff:
+                computedmodels_db = dill.load(ff)
+                loaded_computedmodels_db = True
+                logger.info(
+                    f"computedmodels_db loaded from file {file_path_computedmodels_db}."
+                )
+        else:
+            logger.info(
+                f"computedmodels_db pickle file not found ({file_path_computedmodels_db})."
+            )
+    if not loaded_computedmodels_db:
+        computedmodels_db = None
+
+fig = pl.figure(
+    figsize=(AandA_full_width, AandA_full_width * default_figheight_factor),
+    constrained_layout=True,
+)
+
+(computedmodels_db, rms_values_TS_LC) = create_LC_TS_plots(
+    fig=fig,
+    post_instance=post_instance,
+    datasim_kwargs=kwargs_datasim,
+    plotdef=plotdef_TS,
+    npt_model_default=npt_model,
+    computedmodels_db=computedmodels_db,
+    split_GP_computation=split_GP_computation,
+    fontsize=fontsize,
+)
+
+###############
+## Save outputs
+
+if save_computedmodels_db:
+    if os.path.isfile(file_path_computedmodels_db) and not (
+        overwrite_computedmodels_db
+    ):
+        logger.warning(
+            f"A computedmodels_db file already exists: {file_path_computedmodels_db} and overwrite_computedmodels_db is False !"
+        )
+    else:
+        with open(file_path_computedmodels_db, "wb") as ff:
+            dill.dump(computedmodels_db, ff)
+
+if save_rms_values_LC:
+    file_path_rms_values_TS_LC = os.path.join(
+        output_folders["pickles_analyze"],
+        f"{obj_name}_rms_values_TS_LC{extension_analysis}.pk",
+    )
+    save = True
+    if os.path.isfile(file_path_rms_values_TS_LC):
+        logger.info(f"An rm_TS_LC file already exists: {file_path_rms_values_TS_LC}.")
+        if not overwrite_rms_values_LC:
+            save = False
+    if save:
+        with open(file_path_rms_values_TS_LC, "wb") as ff:
+            dill.dump(rms_values_TS_LC, ff)
+
+############
+## Save plot
+if save_plot:
+    pl.savefig(
+        os.path.join(
+            output_folders["plots"], f"RV_TS_plot{extension_analysis}_paper.pdf"
+        )
+    )
+    pl.close("all")
+else:
+    pl.show()

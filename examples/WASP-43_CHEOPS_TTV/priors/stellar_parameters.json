@@ -1,0 +1,20 @@
+{
+    "Teff": 4500,
+    "Teff_err": 100,
+    "Teff_comment": "in Kelvins, NASA EXOPARCH, Esposito+2017,",
+    "radius": 0.6506,
+    "radius_err": 0.0054,
+    "radius_comment": "in solar radius, NASA EXOPARCH, Esposito+2017,",
+    "mass": 0.688,
+    "mass_err": 0.037,
+    "mass_comment": "in solar radius, NASA EXOPARCH, Esposito+2017,",
+    "[Fe/H]": -0.010,
+    "[Fe/H]_err": 0.150,
+    "[Fe/H]_comment": "in dex, NASA EXOPARCH, Esposito+2017",
+    "logg": 4.50,
+    "logg_err": 0.20,
+    "logg_comment": "NASA EXOPARCH, Esposito+2017",
+    "rho": 2.526,
+    "rho_err": 0.080,
+    "rho_comment": "in g/cm*3 NASA EXOPARCH, Esposito+2017"
+}

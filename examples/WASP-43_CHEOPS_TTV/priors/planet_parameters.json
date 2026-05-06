@@ -1,0 +1,16 @@
+{
+    "period": 0.813474056,
+    "period_err": 0.000000021,
+    "period_comment": "in days, NASA EXOPARCH, Kokori+2023,",
+    "tic": 2457202.184881,
+    "tic_err": 0.000031,
+    "tic_comment": "in BJD-TDB, NASA EXOPARCH, Kokori+2023,",
+    "Rrat": 0.1594,
+    "Rrat_err": 0.0004,
+    "Rrat_comment": "NASA EXOPARCH, Kokori+2023, ",
+    "ecc_Upperlimit": 0.0062,
+    "ecc_comment": "NASA EXOPARCH, Bonomo+2017",
+    "inc": 82.109,
+    "inc_err": 0.088,
+    "inc_comment": "NASA EXOPARCH, Esposito+2017"
+}
